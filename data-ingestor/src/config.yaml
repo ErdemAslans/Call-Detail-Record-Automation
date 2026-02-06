@@ -1,0 +1,6 @@
+mongo:
+  uri: "mongodb://localhost:27017"
+  database: "cdr"
+  collection: "incoming_calls"
+  log_collection: "logs"
+  user_collection: "users"

@@ -1,0 +1,7 @@
+pymongo
+pydantic
+pyyaml
+motor
+pandas
+openpyxl
+pywin32

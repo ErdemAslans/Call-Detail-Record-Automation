@@ -1,0 +1,6 @@
+mongo:
+  uri: "mongodb://admin:Cdr-252Wer@mongodb:27017/cdr?authSource=admin"
+  database: "cdr"
+  collection: "incoming_calls"
+  log_collection: "logs"
+  user_collection: "users"

@@ -1,0 +1,46 @@
+# ===========================
+# .NET / Backend
+# ===========================
+backend/bin/
+backend/obj/
+backend/publish/
+backend/*.user
+backend/.vs/
+
+# ===========================
+# Node.js / Frontend
+# ===========================
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+
+# ===========================
+# Python / Data Ingestor
+# ===========================
+data-ingestor/__pycache__/
+data-ingestor/venv/
+data-ingestor/.venv/
+data-ingestor/*.pyc
+data-ingestor/.ruff_cache/
+
+# ===========================
+# IDE & OS
+# ===========================
+.vs/
+.vscode/
+.idea/
+*.suo
+*.user
+*.swp
+*~
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# ===========================
+# Environment & Secrets
+# ===========================
+.env
+.env.*
+appsettings.Production.json

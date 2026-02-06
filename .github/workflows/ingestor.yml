@@ -1,0 +1,96 @@
+name: 🚀 Data Ingestor CI/CD
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'data-ingestor/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'data-ingestor/**'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    name: 🔍 Validate & Lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: data-ingestor
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🐍 Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: data-ingestor/requirements.txt
+
+      - name: 📦 Install Dependencies
+        run: |
+          pip install --upgrade pip
+          pip install ruff
+          pip install -r requirements.txt || true
+
+      - name: 🔍 Lint with Ruff
+        run: ruff check src/ --ignore E501
+        continue-on-error: true
+
+      - name: ✅ Import Check
+        run: |
+          python -c "
+          import importlib, sys
+          modules = ['pymongo', 'pydantic', 'yaml', 'motor', 'pandas']
+          for m in modules:
+              try:
+                  importlib.import_module(m)
+                  print(f'✅ {m}')
+              except ImportError:
+                  print(f'⚠️ {m} not available (OK for CI)')
+          "
+
+  deploy:
+    name: 🚀 Deploy to Server
+    needs: validate
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: [self-hosted, windows, production]
+    defaults:
+      run:
+        working-directory: data-ingestor
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🛑 Stop Service
+        run: |
+          $service = Get-Service -Name "CDRDataIngestor" -ErrorAction SilentlyContinue
+          if ($service -and $service.Status -eq 'Running') {
+            Stop-Service -Name "CDRDataIngestor" -Force
+            Write-Host "✅ Service stopped"
+            Start-Sleep -Seconds 3
+          } else {
+            Write-Host "⚠️ Service not found or already stopped"
+          }
+        shell: powershell
+
+      - name: 🐍 Install Dependencies
+        run: pip install -r requirements.txt
+        shell: powershell
+
+      - name: 🚀 Start Service
+        run: |
+          $service = Get-Service -Name "CDRDataIngestor" -ErrorAction SilentlyContinue
+          if ($service) {
+            Start-Service -Name "CDRDataIngestor"
+            Start-Sleep -Seconds 3
+            $status = (Get-Service -Name "CDRDataIngestor").Status
+            Write-Host "✅ Service status: $status"
+          } else {
+            Write-Host "⚠️ Service not found - manual start may be needed"
+          }
+        shell: powershell
