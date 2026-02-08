@@ -143,6 +143,13 @@ export default defineComponent({
     const ongoingBreak = ref<BreakTime | null>(null);
     const forceEndLoading = ref(false);
 
+    const checkOngoingBreak = async () => {
+      const ongoing = await userStatisticsStore.fetchAdminOngoingBreak(
+        props.number,
+      );
+      ongoingBreak.value = ongoing || null;
+    };
+
     const fetchBreakTimes = async () => {
       const response = await userStatisticsStore.fetchBreakTimes({
         startDate: props.startDate,
@@ -150,9 +157,7 @@ export default defineComponent({
         number: props.number,
       });
       breakTimes.value = response;
-      // Check if any break has endTime = null (ongoing)
-      ongoingBreak.value =
-        response?.find((b: BreakTime) => !b.endTime) || null;
+      await checkOngoingBreak();
     };
 
     const forceEndBreak = async () => {

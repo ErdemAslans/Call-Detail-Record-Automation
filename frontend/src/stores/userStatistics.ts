@@ -164,6 +164,17 @@ export const useUserStatisticsStore = defineStore("userStatistics", () => {
       });
   }
 
+  function fetchAdminOngoingBreak(number: string) {
+    const url = `${apiUrlConstants.ADMIN_ONGOING_BREAK}/${number}`;
+    return ApiService.get(url)
+      .then(({ data }) => {
+        return data;
+      })
+      .catch(() => {
+        return null;
+      });
+  }
+
   function adminForceEndBreak(userId: string) {
     const url = `${apiUrlConstants.ADMIN_FORCE_END_BREAK}/${userId}`;
     return ApiService.post(url, {})
@@ -241,6 +252,7 @@ export const useUserStatisticsStore = defineStore("userStatistics", () => {
     fetchUserWorkHourStatistics,
     fetchUserNonWorkHourStatistics,
     fetchBreakTimes,
+    fetchAdminOngoingBreak,
     adminForceEndBreak,
     exportUserSpecificReport,
   };

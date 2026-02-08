@@ -121,6 +121,22 @@ public class OperatorController : ControllerBase
         }
     }
 
+    [HttpGet("admin-ongoing-break/{number}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> AdminGetOngoingBreak(string number)
+    {
+        try
+        {
+            var ongoingBreak = await _operatorService.GetOngoingBreakAsync(number);
+            return Ok(ongoingBreak);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while fetching ongoing break for user {Number}", number);
+            return StatusCode(500);
+        }
+    }
+
     [HttpPost("admin-force-end-break/{userId}")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> AdminForceEndBreak(string userId)
