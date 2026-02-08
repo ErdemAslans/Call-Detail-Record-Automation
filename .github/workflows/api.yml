@@ -60,18 +60,17 @@ jobs:
 
       - name: 🛑 Stop IIS Site
         run: |
-          Import-Module WebAdministration
           $siteName = "CDR.Api"
-          $site = Get-WebSite -Name $siteName -ErrorAction SilentlyContinue
-          if ($site) {
-            Stop-WebSite -Name $siteName -ErrorAction SilentlyContinue
-            Stop-WebAppPool -Name $siteName -ErrorAction SilentlyContinue
+          try {
+            & "$env:SystemRoot\System32\inetsrv\appcmd.exe" stop site /site.name:$siteName
+            & "$env:SystemRoot\System32\inetsrv\appcmd.exe" stop apppool /apppool.name:$siteName
             Write-Host "✅ IIS site '$siteName' stopped"
-          } else {
-            Write-Host "⚠️ IIS site '$siteName' not found"
+          } catch {
+            Write-Host "⚠️ Could not stop IIS site: $($_.Exception.Message)"
           }
           Start-Sleep -Seconds 3
         shell: powershell
+        continue-on-error: true
 
       - name: 🔨 Publish
         run: dotnet publish -c Release -o C:\Call-Detail-Record-Automation\backend\publish --self-contained false
@@ -79,12 +78,16 @@ jobs:
 
       - name: 🚀 Start IIS Site
         run: |
-          Import-Module WebAdministration
           $siteName = "CDR.Api"
-          Start-WebAppPool -Name $siteName -ErrorAction SilentlyContinue
-          Start-WebSite -Name $siteName -ErrorAction SilentlyContinue
-          Write-Host "✅ IIS site '$siteName' started"
+          try {
+            & "$env:SystemRoot\System32\inetsrv\appcmd.exe" start apppool /apppool.name:$siteName
+            & "$env:SystemRoot\System32\inetsrv\appcmd.exe" start site /site.name:$siteName
+            Write-Host "✅ IIS site '$siteName' started"
+          } catch {
+            Write-Host "⚠️ Could not start IIS site: $($_.Exception.Message)"
+          }
         shell: powershell
+        continue-on-error: true
 
       - name: ✅ Health Check
         run: |
