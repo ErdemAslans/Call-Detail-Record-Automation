@@ -33,8 +33,8 @@ export const useUserStatisticsStore = defineStore("userStatistics", () => {
         );
         return data;
       })
-      .catch(({ response }) => {
-        setError(response.data.errors);
+      .catch((error: any) => {
+        setError(error.response?.data?.errors || { general: "Bir hata oluştu" });
       });
   }
 
@@ -62,9 +62,8 @@ export const useUserStatisticsStore = defineStore("userStatistics", () => {
         );
         return data;
       })
-      .catch(({ response }) => {
-        console.log("errorResponse", response);
-        setError(response.data.errors);
+      .catch((error: any) => {
+        setError(error.response?.data?.errors || { general: "Bir hata oluştu" });
       });
   }
 
@@ -78,8 +77,8 @@ export const useUserStatisticsStore = defineStore("userStatistics", () => {
         );
         return data;
       })
-      .catch(({ response }) => {
-        setError(response.data.errors);
+      .catch((error: any) => {
+        setError(error.response?.data?.errors || { general: "Bir hata oluştu" });
       });
   }
 
@@ -105,8 +104,8 @@ export const useUserStatisticsStore = defineStore("userStatistics", () => {
         );
         return data;
       })
-      .catch(({ response }) => {
-        setError(response.data.errors);
+      .catch((error: any) => {
+        setError(error.response?.data?.errors || { general: "Bir hata oluştu" });
       });
   }
 
@@ -132,8 +131,8 @@ export const useUserStatisticsStore = defineStore("userStatistics", () => {
         );
         return data;
       })
-      .catch(({ response }) => {
-        setError(response.data.errors);
+      .catch((error: any) => {
+        setError(error.response?.data?.errors || { general: "Bir hata oluştu" });
       });
   }
 
@@ -159,8 +158,8 @@ export const useUserStatisticsStore = defineStore("userStatistics", () => {
         );
         return data;
       })
-      .catch(({ response }) => {
-        setError(response.data.errors);
+      .catch((error: any) => {
+        setError(error.response?.data?.errors || { general: "Bir hata oluştu" });
       });
   }
 
@@ -215,8 +214,8 @@ export const useUserStatisticsStore = defineStore("userStatistics", () => {
           "success",
         );
       })
-      .catch(({ response }) => {
-        setError(response.data.errors);
+      .catch((error: any) => {
+        setError(error.response?.data?.errors || { general: "Bir hata oluştu" });
       });
   }
 

@@ -25,8 +25,8 @@ export const useBreaksStore = defineStore("breaks", () => {
         );
         return formatBreakTimes(data);
       })
-      .catch(({ response }) => {
-        return response.data.errors;
+      .catch((error: any) => {
+        return error.response?.data?.errors || { general: "Bir hata oluştu" };
       });
   }
 
@@ -39,8 +39,8 @@ export const useBreaksStore = defineStore("breaks", () => {
           "success",
         );
       })
-      .catch(({ response }) => {
-        return response.data.errors;
+      .catch((error: any) => {
+        return error.response?.data?.errors || { general: "Bir hata oluştu" };
       });
   }
 
@@ -50,8 +50,8 @@ export const useBreaksStore = defineStore("breaks", () => {
       .then(() => {
         ResponseMessageService.showMessageByType("breaks_endBreak", "success");
       })
-      .catch(({ response }) => {
-        return response.data.errors;
+      .catch((error: any) => {
+        return error.response?.data?.errors || { general: "Bir hata oluştu" };
       });
   }
 

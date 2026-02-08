@@ -34,8 +34,8 @@ export const useDashboardStore = defineStore("dashboard", () => {
         );
         return data;
       })
-      .catch(({ response }) => {
-        setError(response.data.errors);
+      .catch((error: any) => {
+        setError(error.response?.data?.errors || { general: "Bir hata oluştu" });
       });
   }
 
@@ -50,8 +50,8 @@ export const useDashboardStore = defineStore("dashboard", () => {
         );
         dailyCallReport.value = data;
       })
-      .catch(({ response }) => {
-        setError(response.data.errors);
+      .catch((error: any) => {
+        setError(error.response?.data?.errors || { general: "Bir hata oluştu" });
       });
   }
 
@@ -81,8 +81,8 @@ export const useDashboardStore = defineStore("dashboard", () => {
         );
         return data;
       })
-      .catch(({ response }) => {
-        setError(response.data.errors);
+      .catch((error: any) => {
+        setError(error.response?.data?.errors || { general: "Bir hata oluştu" });
       });
   }
 

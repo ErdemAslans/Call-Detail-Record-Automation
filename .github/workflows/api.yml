@@ -61,27 +61,45 @@ jobs:
       - name: 🛑 Stop IIS Site
         run: |
           Import-Module WebAdministration
-          Stop-WebSite -Name "CdrApi" -ErrorAction SilentlyContinue
+          $siteName = "CDR.Api"
+          $site = Get-WebSite -Name $siteName -ErrorAction SilentlyContinue
+          if ($site) {
+            Stop-WebSite -Name $siteName -ErrorAction SilentlyContinue
+            Stop-WebAppPool -Name $siteName -ErrorAction SilentlyContinue
+            Write-Host "✅ IIS site '$siteName' stopped"
+          } else {
+            Write-Host "⚠️ IIS site '$siteName' not found"
+          }
           Start-Sleep -Seconds 3
         shell: powershell
 
       - name: 🔨 Publish
-        run: dotnet publish -c Release -o C:\inetpub\CdrApi\publish --self-contained false
+        run: dotnet publish -c Release -o C:\Call-Detail-Record-Automation\backend\publish --self-contained false
         shell: powershell
 
       - name: 🚀 Start IIS Site
         run: |
           Import-Module WebAdministration
-          Start-WebSite -Name "CdrApi" -ErrorAction SilentlyContinue
+          $siteName = "CDR.Api"
+          Start-WebAppPool -Name $siteName -ErrorAction SilentlyContinue
+          Start-WebSite -Name $siteName -ErrorAction SilentlyContinue
+          Write-Host "✅ IIS site '$siteName' started"
         shell: powershell
 
       - name: ✅ Health Check
         run: |
           Start-Sleep -Seconds 5
           try {
-            $response = Invoke-WebRequest -Uri "http://localhost:5000/api/health" -TimeoutSec 10 -UseBasicParsing
+            [System.Net.ServicePointManager]::ServerCertificateValidationCallback = {$true}
+            [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+            $response = Invoke-WebRequest -Uri "https://doascdrapi.fw.dohas.com.tr:8082/account/login" -Method GET -TimeoutSec 10 -UseBasicParsing
             Write-Host "✅ API is running! Status: $($response.StatusCode)"
           } catch {
-            Write-Host "⚠️ Health check failed: $($_.Exception.Message)"
+            $statusCode = $_.Exception.Response.StatusCode.Value__
+            if ($statusCode -eq 405) {
+              Write-Host "✅ API is running! (405 = endpoint reached successfully)"
+            } else {
+              Write-Host "⚠️ Health check: $($_.Exception.Message)"
+            }
           }
         shell: powershell

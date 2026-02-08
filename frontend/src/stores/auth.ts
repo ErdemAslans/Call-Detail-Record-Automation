@@ -75,8 +75,8 @@ export const useAuthStore = defineStore("auth", () => {
       .then(({ data }) => {
         setAuth(data);
       })
-      .catch(({ response }) => {
-        setError(response.data.errors);
+      .catch((error: any) => {
+        setError(error.response?.data?.errors || { general: "Bir hata oluştu" });
       });
   }
 
@@ -89,8 +89,8 @@ export const useAuthStore = defineStore("auth", () => {
       .then(({ data }) => {
         setAuth(data);
       })
-      .catch(({ response }) => {
-        setError(response.data.errors);
+      .catch((error: any) => {
+        setError(error.response?.data?.errors || { general: "Bir hata oluştu" });
       });
   }
 
@@ -99,8 +99,8 @@ export const useAuthStore = defineStore("auth", () => {
       .then(() => {
         setError({});
       })
-      .catch(({ response }) => {
-        setError(response.data.errors);
+      .catch((error: any) => {
+        setError(error.response?.data?.errors || { general: "Bir hata oluştu" });
       });
   }
 

@@ -31,7 +31,7 @@ public class EmailNotification : INotification<EmailMessage>
                     smtpClient.Credentials = new System.Net.NetworkCredential(_settings.UserName, _settings.Password);
                 }
 
-                var mailMessage = new MailMessage
+                using var mailMessage = new MailMessage
                 {
                     From = new MailAddress(_settings.From),
                     Subject = email.Subject,

@@ -58,6 +58,9 @@ public class OperatorController : ControllerBase
         try
         {
             var username = User.FindFirst(ClaimTypes.Name)?.Value;
+            if (string.IsNullOrEmpty(username))
+                return Unauthorized("Username claim not found in token.");
+
             var (success, breakInfo, message) = await _operatorService.StartBreakAsync(username, request?.Reason);
 
             if (!success)
@@ -100,6 +103,9 @@ public class OperatorController : ControllerBase
     public async Task<IActionResult> GetUserBreakTimes([FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
     {
         var username = User.FindFirst(ClaimTypes.Name)?.Value;
+        if (string.IsNullOrEmpty(username))
+            return Unauthorized("Username claim not found in token.");
+
         var breakTimes = await _operatorService.GetUserBreakTimesAsync(username, startDate, endDate);
         return Ok(breakTimes);
     }

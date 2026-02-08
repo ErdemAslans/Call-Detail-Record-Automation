@@ -62,17 +62,26 @@ jobs:
         run: npm ci
         shell: powershell
 
-      - name: 🔨 Build
+      - name: 📝 Create Production .env
+        run: |
+          @"
+          VITE_APP_NAME="Dogus Otomotiv"
+          VITE_APP_API_URL="https://doascdrapi.fw.dohas.com.tr:8082"
+          "@ | Out-File -Encoding utf8 .env
+          Write-Host "✅ Production .env created"
+        shell: powershell
+
+      - name: 🔨 Build Production
         run: npm run build-only
         shell: powershell
 
       - name: 🚀 Deploy to IIS
         run: |
           $source = "dist\*"
-          $dest = "C:\inetpub\CdrWeb"
+          $dest = "C:\Call-Detail-Record-Automation\frontend\dist"
           if (Test-Path $source) {
             Copy-Item -Path $source -Destination $dest -Recurse -Force
-            Write-Host "✅ Frontend deployed successfully!"
+            Write-Host "✅ Frontend deployed to $dest"
           } else {
             Write-Host "❌ Build output not found"
             exit 1

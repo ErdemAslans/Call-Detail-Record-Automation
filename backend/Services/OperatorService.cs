@@ -45,6 +45,9 @@ namespace Cdr.Api.Services
         public async Task<(bool Success, BreakResponseModel? BreakInfo, string? Message)> StartBreakAsync(string username, string? reason)
         {
             var user = await _operatorRepository.GetUserByUsernameAsync(username);
+            if (user == null)
+                return (false, null, "User not found.");
+
             if (await _breakRepository.HasOngoingBreakAsync(user.Id))
             {
                 return (false, null, "User already has an ongoing break.");
@@ -77,6 +80,9 @@ namespace Cdr.Api.Services
         public async Task<List<BreakResponseModel>> GetUserBreakTimesAsync(string username, DateTime startDate, DateTime endDate)
         {
             var user = await _operatorRepository.GetUserByUsernameAsync(username);
+            if (user == null)
+                return new List<BreakResponseModel>();
+
             var breaks = await _breakRepository.GetBreaksByUserIdAndDateRangeAsync(user.Id, startDate, endDate);
             return _mapper.Map<List<BreakResponseModel>>(breaks);
         }

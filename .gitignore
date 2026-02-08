@@ -43,4 +43,5 @@ Desktop.ini
 # ===========================
 .env
 .env.*
+!.env.example
 appsettings.Production.json

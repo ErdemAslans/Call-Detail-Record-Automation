@@ -109,7 +109,6 @@ export default defineComponent({
     const fetchAnserweredCalls = async (period: number) => {
       // Fetch weekly data
       const data = await dashboardStore.fetchWeeklyAnsweredCalls(period);
-      console.log("data", data);
 
       const error = Object.values(dashboardStore.errors);
 

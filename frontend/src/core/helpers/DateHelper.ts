@@ -1,6 +1,5 @@
 class DateHelper {
   public static toLocaleDateStringWithCulture = (date: Date): string => {
-    console.log("dateInStart", date);
     const lang = localStorage.getItem("lang");
     if (lang) {
       return date.toLocaleDateString(lang);
