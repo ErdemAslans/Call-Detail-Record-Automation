@@ -13,6 +13,35 @@
 
     <!--begin::Body-->
     <div class="card-body card-scroll h-200px pt-5">
+      <!--begin::Ongoing Break Alert-->
+      <div
+        v-if="ongoingBreak"
+        class="notice d-flex bg-light-danger rounded border-danger border border-dashed p-4 mb-4"
+      >
+        <i class="fa fa-exclamation-triangle fs-2tx text-danger me-4"></i>
+        <div class="d-flex flex-stack flex-grow-1 flex-wrap flex-md-nowrap">
+          <div class="mb-3 mb-md-0 fw-semibold">
+            <h4 class="text-gray-900 fw-bold">
+              {{ translate("breaks_ongoingBreak") || "Açık Mola" }}
+            </h4>
+            <div class="fs-7 text-gray-700">
+              {{ ongoingBreak.reason }} -
+              {{ DateHelper.toLocaleDateStringWithCulture(new Date(ongoingBreak.startTime)) }}
+              {{ DateHelper.toLocaleTimeStringWithCulture(new Date(ongoingBreak.startTime)) }}
+            </div>
+          </div>
+          <button
+            class="btn btn-sm btn-danger fw-bold"
+            @click="forceEndBreak"
+            :disabled="forceEndLoading"
+          >
+            <i class="fa fa-stop-circle me-1"></i>
+            {{ forceEndLoading ? "..." : translate("breaks_forceEnd") || "Molayı Kapat" }}
+          </button>
+        </div>
+      </div>
+      <!--end::Ongoing Break Alert-->
+
       <!--begin::Timeline-->
       <div class="timeline-label">
         <div
@@ -75,6 +104,7 @@ import { defineComponent, onMounted, ref, watch, computed } from "vue";
 import { useUserStatisticsStore } from "@/stores/userStatistics";
 import DateHelper from "@/core/helpers/DateHelper";
 import { useI18n } from "vue-i18n";
+import { ElMessage } from "element-plus";
 
 interface TransformedBreakTime {
   breakTime: string;
@@ -110,6 +140,8 @@ export default defineComponent({
     };
     const userStatisticsStore = useUserStatisticsStore();
     const breakTimes = ref<BreakTime[]>([]);
+    const ongoingBreak = ref<BreakTime | null>(null);
+    const forceEndLoading = ref(false);
 
     const fetchBreakTimes = async () => {
       const response = await userStatisticsStore.fetchBreakTimes({
@@ -118,6 +150,31 @@ export default defineComponent({
         number: props.number,
       });
       breakTimes.value = response;
+      // Check if any break has endTime = null (ongoing)
+      ongoingBreak.value =
+        response?.find((b: BreakTime) => !b.endTime) || null;
+    };
+
+    const forceEndBreak = async () => {
+      if (!ongoingBreak.value) return;
+      forceEndLoading.value = true;
+      try {
+        await userStatisticsStore.adminForceEndBreak(
+          ongoingBreak.value.userId,
+        );
+        ElMessage.success(
+          translate("breaks_forceEndSuccess") ||
+            "Mola başarıyla kapatıldı.",
+        );
+        await fetchBreakTimes();
+      } catch {
+        ElMessage.error(
+          translate("breaks_forceEndError") ||
+            "Mola kapatılırken hata oluştu.",
+        );
+      } finally {
+        forceEndLoading.value = false;
+      }
     };
 
     const transformedBreakTimesWithDates = computed(() => {
@@ -171,6 +228,9 @@ export default defineComponent({
       translate,
       DateHelper,
       transformedBreakTimesWithDates,
+      ongoingBreak,
+      forceEndBreak,
+      forceEndLoading,
     };
   },
 });

@@ -33,8 +33,8 @@ export const useUserStatisticsStore = defineStore("userStatistics", () => {
         );
         return data;
       })
-      .catch((error: any) => {
-        setError(error.response?.data?.errors || { general: "Bir hata oluştu" });
+      .catch(({ response }) => {
+        setError(response.data.errors);
       });
   }
 
@@ -62,8 +62,9 @@ export const useUserStatisticsStore = defineStore("userStatistics", () => {
         );
         return data;
       })
-      .catch((error: any) => {
-        setError(error.response?.data?.errors || { general: "Bir hata oluştu" });
+      .catch(({ response }) => {
+        console.log("errorResponse", response);
+        setError(response.data.errors);
       });
   }
 
@@ -77,8 +78,8 @@ export const useUserStatisticsStore = defineStore("userStatistics", () => {
         );
         return data;
       })
-      .catch((error: any) => {
-        setError(error.response?.data?.errors || { general: "Bir hata oluştu" });
+      .catch(({ response }) => {
+        setError(response.data.errors);
       });
   }
 
@@ -104,8 +105,8 @@ export const useUserStatisticsStore = defineStore("userStatistics", () => {
         );
         return data;
       })
-      .catch((error: any) => {
-        setError(error.response?.data?.errors || { general: "Bir hata oluştu" });
+      .catch(({ response }) => {
+        setError(response.data.errors);
       });
   }
 
@@ -131,8 +132,8 @@ export const useUserStatisticsStore = defineStore("userStatistics", () => {
         );
         return data;
       })
-      .catch((error: any) => {
-        setError(error.response?.data?.errors || { general: "Bir hata oluştu" });
+      .catch(({ response }) => {
+        setError(response.data.errors);
       });
   }
 
@@ -158,8 +159,20 @@ export const useUserStatisticsStore = defineStore("userStatistics", () => {
         );
         return data;
       })
-      .catch((error: any) => {
-        setError(error.response?.data?.errors || { general: "Bir hata oluştu" });
+      .catch(({ response }) => {
+        setError(response.data.errors);
+      });
+  }
+
+  function adminForceEndBreak(userId: string) {
+    const url = `${apiUrlConstants.ADMIN_FORCE_END_BREAK}/${userId}`;
+    return ApiService.post(url, {})
+      .then(({ data }) => {
+        return data;
+      })
+      .catch(({ response }) => {
+        setError(response.data.errors);
+        throw response;
       });
   }
 
@@ -214,8 +227,8 @@ export const useUserStatisticsStore = defineStore("userStatistics", () => {
           "success",
         );
       })
-      .catch((error: any) => {
-        setError(error.response?.data?.errors || { general: "Bir hata oluştu" });
+      .catch(({ response }) => {
+        setError(response.data.errors);
       });
   }
 
@@ -228,6 +241,7 @@ export const useUserStatisticsStore = defineStore("userStatistics", () => {
     fetchUserWorkHourStatistics,
     fetchUserNonWorkHourStatistics,
     fetchBreakTimes,
+    adminForceEndBreak,
     exportUserSpecificReport,
   };
 });
