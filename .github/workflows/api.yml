@@ -60,17 +60,25 @@ jobs:
       - name: 📥 Checkout
         uses: actions/checkout@v4
 
-      - name: 🛑 Stop IIS Site
+      - name: 🛑 Take App Offline & Stop IIS
         run: |
+          $publishPath = "C:\Call-Detail-Record-Automation\backend\publish"
           $siteName = "CDR.Api"
+
+          # app_offline.htm IIS'e uygulamayi unload ettirip DLL kilidini acar
+          "<!DOCTYPE html><html><body><h1>Updating...</h1></body></html>" | Out-File -Encoding utf8 "$publishPath\app_offline.htm"
+          Write-Host "✅ app_offline.htm created - IIS will unload the app"
+
+          # App pool'u da durduralim
           try {
-            & "$env:SystemRoot\System32\inetsrv\appcmd.exe" stop site /site.name:$siteName
-            & "$env:SystemRoot\System32\inetsrv\appcmd.exe" stop apppool /apppool.name:$siteName
-            Write-Host "✅ IIS site '$siteName' stopped"
+            & "$env:SystemRoot\System32\inetsrv\appcmd.exe" stop apppool /apppool.name:$siteName 2>&1
+            Write-Host "✅ App pool stopped"
           } catch {
-            Write-Host "⚠️ Could not stop IIS site: $($_.Exception.Message)"
+            Write-Host "⚠️ Could not stop app pool (may already be stopped)"
           }
-          Start-Sleep -Seconds 3
+
+          # Dosya kilidinin acilmasi icin bekle
+          Start-Sleep -Seconds 5
         shell: powershell
         continue-on-error: true
 
@@ -78,22 +86,32 @@ jobs:
         run: dotnet publish -c Release -o C:\Call-Detail-Record-Automation\backend\publish --self-contained false
         shell: powershell
 
-      - name: 🚀 Start IIS Site
+      - name: 🚀 Bring App Online & Start IIS
         run: |
+          $publishPath = "C:\Call-Detail-Record-Automation\backend\publish"
           $siteName = "CDR.Api"
+
+          # app_offline.htm'i sil - IIS uygulamayi tekrar yukler
+          $offlinePath = "$publishPath\app_offline.htm"
+          if (Test-Path $offlinePath) {
+            Remove-Item $offlinePath -Force
+            Write-Host "✅ app_offline.htm removed"
+          }
+
+          # App pool'u baslat
           try {
-            & "$env:SystemRoot\System32\inetsrv\appcmd.exe" start apppool /apppool.name:$siteName
-            & "$env:SystemRoot\System32\inetsrv\appcmd.exe" start site /site.name:$siteName
-            Write-Host "✅ IIS site '$siteName' started"
+            & "$env:SystemRoot\System32\inetsrv\appcmd.exe" start apppool /apppool.name:$siteName 2>&1
+            & "$env:SystemRoot\System32\inetsrv\appcmd.exe" start site /site.name:$siteName 2>&1
+            Write-Host "✅ IIS site started"
           } catch {
-            Write-Host "⚠️ Could not start IIS site: $($_.Exception.Message)"
+            Write-Host "⚠️ Could not start IIS (may need manual restart)"
           }
         shell: powershell
         continue-on-error: true
 
       - name: ✅ Health Check
         run: |
-          Start-Sleep -Seconds 5
+          Start-Sleep -Seconds 8
           try {
             [System.Net.ServicePointManager]::ServerCertificateValidationCallback = {$true}
             [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
