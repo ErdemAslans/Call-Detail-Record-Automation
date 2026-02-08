@@ -18,6 +18,7 @@ export interface ApiUrlConstants {
   BREAKS: string;
   START_NEW_BREAK: string;
   END_BREAK: string;
+  ONGOING_BREAK: string;
   // Email Report endpoints
   GENERATE_EMAIL_REPORT: string;
   SEND_EMAIL_REPORT: string;
@@ -45,6 +46,7 @@ const apiUrlConstants: ApiUrlConstants = {
   BREAKS: "operator/user-break-times",
   START_NEW_BREAK: "operator/start-break",
   END_BREAK: "operator/end-break",
+  ONGOING_BREAK: "operator/ongoing-break",
   // Email Report endpoints
   GENERATE_EMAIL_REPORT: "report/generate-email-report",
   SEND_EMAIL_REPORT: "report/send-email-report",

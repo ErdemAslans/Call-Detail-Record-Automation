@@ -58,9 +58,6 @@ public class OperatorController : ControllerBase
         try
         {
             var username = User.FindFirst(ClaimTypes.Name)?.Value;
-            if (string.IsNullOrEmpty(username))
-                return Unauthorized("Username claim not found in token.");
-
             var (success, breakInfo, message) = await _operatorService.StartBreakAsync(username, request?.Reason);
 
             if (!success)
@@ -103,10 +100,47 @@ public class OperatorController : ControllerBase
     public async Task<IActionResult> GetUserBreakTimes([FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
     {
         var username = User.FindFirst(ClaimTypes.Name)?.Value;
-        if (string.IsNullOrEmpty(username))
-            return Unauthorized("Username claim not found in token.");
-
         var breakTimes = await _operatorService.GetUserBreakTimesAsync(username, startDate, endDate);
         return Ok(breakTimes);
+    }
+
+    [HttpGet("ongoing-break")]
+    [Authorize(Roles = "Central")]
+    public async Task<IActionResult> GetOngoingBreak()
+    {
+        try
+        {
+            var username = User.FindFirst(ClaimTypes.Name)?.Value;
+            var ongoingBreak = await _operatorService.GetOngoingBreakAsync(username);
+            return Ok(ongoingBreak);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while fetching ongoing break");
+            return StatusCode(500);
+        }
+    }
+
+    [HttpPost("admin-force-end-break/{userId}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> AdminForceEndBreak(string userId)
+    {
+        try
+        {
+            var adminUsername = User.FindFirst(ClaimTypes.Name)?.Value;
+            _logger.LogWarning("Admin {Admin} force-ending break for user {UserId}", adminUsername, userId);
+
+            var (success, breakInfo, message) = await _operatorService.ForceEndBreakAsync(userId);
+            if (!success)
+            {
+                return BadRequest(message);
+            }
+            return Ok(new { breakInfo, message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while force-ending break");
+            return StatusCode(500);
+        }
     }
 }

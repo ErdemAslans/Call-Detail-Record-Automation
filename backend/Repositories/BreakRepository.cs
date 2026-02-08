@@ -56,6 +56,15 @@ namespace Cdr.Api.Repositories
             return await _collection.Find(filter).ToListAsync();
         }
 
+        public async Task<Break?> GetOngoingBreakAsync(string userId)
+        {
+            var filter = Builders<Break>.Filter.And(
+                Builders<Break>.Filter.Eq(b => b.UserId, userId),
+                Builders<Break>.Filter.Eq(b => b.EndTime, null)
+            );
+            return await _collection.Find(filter).FirstOrDefaultAsync();
+        }
+
         public async Task<List<Break>> GetBreaksByUserIdAndDateRangeAsync(string userId, DateTime startDate, DateTime endDate)
         {
             // Frontend'den gelen tarihler Turkey local time (UTC+3)

@@ -52,4 +52,14 @@ public interface IOperatorService
     /// <param name="endDate">The end date of the range</param>
     /// <returns>A list of break records for the specified operator and date range</returns>
     Task<List<BreakResponseModel>> GetUserBreakTimesAsync(string username, DateTime startDate, DateTime endDate);
+
+    /// <summary>
+    /// Retrieves the ongoing break for an operator (if any), regardless of date range
+    /// </summary>
+    Task<BreakResponseModel?> GetOngoingBreakAsync(string username);
+
+    /// <summary>
+    /// Force-ends any ongoing break for a given user (Admin only)
+    /// </summary>
+    Task<(bool Success, BreakResponseModel? BreakInfo, string? Message)> ForceEndBreakAsync(string userId);
 }

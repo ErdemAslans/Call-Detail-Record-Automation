@@ -188,6 +188,8 @@ import { defineComponent, onMounted, ref } from "vue";
 import BreakItem from "@/components/activity-timeline-items/BreakItem.vue";
 import { useBreaksStore } from "@/stores/breaksTime";
 import { Modal } from "bootstrap";
+import { ElMessage } from "element-plus";
+import i18n from "@/core/plugins/i18n";
 
 export default defineComponent({
   name: "kt-break-timeline",
@@ -198,6 +200,7 @@ export default defineComponent({
     const breaks = ref<FormatedBreakTimesItems[]>([]);
     const breaksTimeStore = useBreaksStore();
     const ongoingBreaks = ref(false);
+    const ongoingBreakId = ref<string | null>(null);
     const breakReason = ref("");
     const breakReasonError = ref("");
     const breakModal = ref<Modal | null>(null);
@@ -249,14 +252,23 @@ export default defineComponent({
     const startDate = ref(start);
     const endDate = ref(end);
 
+    const checkOngoingBreak = async () => {
+      const ongoing = await breaksTimeStore.fetchOngoingBreak();
+      if (ongoing) {
+        ongoingBreaks.value = true;
+        ongoingBreakId.value = ongoing.id;
+      } else {
+        ongoingBreaks.value = false;
+        ongoingBreakId.value = null;
+      }
+    };
+
     const fetchBreaksAndUpdateStatus = async () => {
       breaks.value = await breaksTimeStore.fetchBreaks({
         startDate: startDate.value,
         endDate: endDate.value,
       });
-      ongoingBreaks.value = breaks.value.some(
-        (breakItem) => !breakItem.isEnd && breakItem.type === "breakStart",
-      );
+      await checkOngoingBreak();
     };
 
     const startNewBreak = async () => {
@@ -283,15 +295,24 @@ export default defineComponent({
         await breaksTimeStore.startNewBreak(breakReason.value);
         breakModal.value?.hide();
         await fetchBreaksAndUpdateStatus();
-      } catch (error) {
-        console.error("Error starting break:", error);
+      } catch (error: any) {
+        breakModal.value?.hide();
+        if (error?.status === 400) {
+          ElMessage.error(
+            i18n.global.t("breaks_ongoingBreakError") ||
+              "Zaten açık bir molanız var. Lütfen önce mevcut molayı kapatın.",
+          );
+          await checkOngoingBreak();
+        }
       }
     };
 
     const endCurrentBreak = async () => {
-      const breakId = breaks.value.find(
-        (breakItem) => !breakItem.isEnd && breakItem.type === "breakStart",
-      )?.id;
+      const breakId =
+        ongoingBreakId.value ||
+        breaks.value.find(
+          (breakItem) => !breakItem.isEnd && breakItem.type === "breakStart",
+        )?.id;
       if (!breakId) return;
 
       await breaksTimeStore.endBreak(breakId);
