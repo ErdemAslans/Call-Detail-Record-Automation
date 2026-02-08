@@ -8,6 +8,7 @@ using Interfaces.Notification;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using System.Globalization;
 using System.Net.Mail;
 using System.Text;
 
@@ -339,16 +340,18 @@ public class CdrReportEmailService : ICdrReportEmailService
     private string ComposeEmailBody(CdrReportResult report)
     {
         var sb = new StringBuilder();
+        var trCulture = new CultureInfo("tr-TR");
         var turkeyStart = CdrReportHelper.ToTurkeyTime(report.PeriodStartDate);
         var turkeyEnd = CdrReportHelper.ToTurkeyTime(report.PeriodEndDate);
+        var turkeyGeneratedAt = CdrReportHelper.ToTurkeyTime(report.GeneratedAt);
 
         sb.AppendLine("<!DOCTYPE html>");
         sb.AppendLine("<html lang=\"tr\">");
         sb.AppendLine("<head><meta charset=\"UTF-8\"></head>");
         sb.AppendLine("<body style=\"font-family: Arial, sans-serif; line-height: 1.6; color: #333;\">");
-        
+
         sb.AppendLine("<div style=\"max-width: 600px; margin: 0 auto; padding: 20px;\">");
-        
+
         // Header
         sb.AppendLine("<h2 style=\"color: #1a5f7a; border-bottom: 2px solid #1a5f7a; padding-bottom: 10px;\">");
         sb.AppendLine($"📊 Doğuş Oto {report.ReportType} CDR Raporu");
@@ -356,8 +359,8 @@ public class CdrReportEmailService : ICdrReportEmailService
 
         // Period info
         sb.AppendLine("<p>");
-        sb.AppendLine($"<strong>Rapor Dönemi:</strong> {turkeyStart:dd MMMM yyyy} - {turkeyEnd:dd MMMM yyyy}<br>");
-        sb.AppendLine($"<strong>Oluşturulma Zamanı:</strong> {report.GeneratedAt:dd MMMM yyyy HH:mm:ss} UTC");
+        sb.AppendLine($"<strong>Rapor Dönemi:</strong> {turkeyStart.ToString("dd MMMM yyyy", trCulture)} - {turkeyEnd.ToString("dd MMMM yyyy", trCulture)}<br>");
+        sb.AppendLine($"<strong>Oluşturulma Zamanı:</strong> {turkeyGeneratedAt.ToString("dd MMMM yyyy HH:mm:ss", trCulture)}");
         sb.AppendLine("</p>");
 
         // Metrics summary
