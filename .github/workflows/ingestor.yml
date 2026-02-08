@@ -5,10 +5,12 @@ on:
     branches: [main]
     paths:
       - 'data-ingestor/**'
+      - '.github/workflows/ingestor.yml'
   pull_request:
     branches: [main]
     paths:
       - 'data-ingestor/**'
+      - '.github/workflows/ingestor.yml'
   workflow_dispatch:
 
 jobs:
