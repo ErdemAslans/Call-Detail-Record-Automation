@@ -166,7 +166,9 @@ export default defineComponent({
           startDate: dateRange.value.start,
           endDate: dateRange.value.end,
         });
-        departments.value = data ?? [];
+        // Backend returns { incoming: [...], outgoing: [...], internal: [...] }
+        // Use incoming calls for department breakdown (most relevant)
+        departments.value = data?.incoming ?? [];
       } finally {
         isLoading.value = false;
       }
