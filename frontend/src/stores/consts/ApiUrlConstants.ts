@@ -26,6 +26,9 @@ export interface ApiUrlConstants {
   SEND_EMAIL_REPORT: string;
   REPORT_EXECUTION_HISTORY: string;
   DOWNLOAD_REPORT: string;
+  // Department statistics
+  DEPARTMENT_STATISTICS: string;
+  DEPARTMENT_STATISTICS_EXCEL: string;
 }
 
 const apiUrlConstants: ApiUrlConstants = {
@@ -56,6 +59,9 @@ const apiUrlConstants: ApiUrlConstants = {
   SEND_EMAIL_REPORT: "report/send-email-report",
   REPORT_EXECUTION_HISTORY: "report/execution-history",
   DOWNLOAD_REPORT: "report/download",
+  // Department statistics
+  DEPARTMENT_STATISTICS: "report/department-statistics",
+  DEPARTMENT_STATISTICS_EXCEL: "report/department-statistics/excel",
 };
 
 export { apiUrlConstants };

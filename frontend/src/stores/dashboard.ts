@@ -34,8 +34,8 @@ export const useDashboardStore = defineStore("dashboard", () => {
         );
         return data;
       })
-      .catch((error: any) => {
-        setError(error.response?.data?.errors || { general: "Bir hata oluştu" });
+      .catch(({ response }) => {
+        setError(response.data.errors);
       });
   }
 
@@ -50,8 +50,8 @@ export const useDashboardStore = defineStore("dashboard", () => {
         );
         dailyCallReport.value = data;
       })
-      .catch((error: any) => {
-        setError(error.response?.data?.errors || { general: "Bir hata oluştu" });
+      .catch(({ response }) => {
+        setError(response.data.errors);
       });
   }
 
@@ -81,8 +81,48 @@ export const useDashboardStore = defineStore("dashboard", () => {
         );
         return data;
       })
-      .catch((error: any) => {
-        setError(error.response?.data?.errors || { general: "Bir hata oluştu" });
+      .catch(({ response }) => {
+        setError(response.data.errors);
+      });
+  }
+
+  function fetchDepartmentStatistics(params: {
+    startDate: string;
+    endDate: string;
+  }) {
+    const queryString = `startDate=${encodeURIComponent(params.startDate)}&endDate=${encodeURIComponent(params.endDate)}`;
+    const url = `${apiUrlConstants.DEPARTMENT_STATISTICS}?${queryString}`;
+
+    return ApiService.get(url)
+      .then(({ data }) => {
+        return data;
+      })
+      .catch(({ response }) => {
+        setError(response?.data?.errors);
+        return [];
+      });
+  }
+
+  function downloadDepartmentExcel(params: {
+    startDate: string;
+    endDate: string;
+  }) {
+    const queryString = `startDate=${encodeURIComponent(params.startDate)}&endDate=${encodeURIComponent(params.endDate)}`;
+    const url = `${apiUrlConstants.DEPARTMENT_STATISTICS_EXCEL}?${queryString}`;
+
+    return ApiService.get(url, { responseType: "blob" })
+      .then(({ data }) => {
+        const blob = new Blob([data], {
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `departman-istatistikleri-${params.startDate}-${params.endDate}.xlsx`;
+        link.click();
+        URL.revokeObjectURL(link.href);
+      })
+      .catch(({ response }) => {
+        setError(response?.data?.errors);
       });
   }
 
@@ -92,5 +132,7 @@ export const useDashboardStore = defineStore("dashboard", () => {
     fetchWeeklyAnsweredCalls,
     fetchDailyCallReport,
     fetchCallRecords,
+    fetchDepartmentStatistics,
+    downloadDepartmentExcel,
   };
 });

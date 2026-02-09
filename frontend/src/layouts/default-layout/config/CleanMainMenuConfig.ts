@@ -4,10 +4,22 @@ const MainMenuConfig: Array<MenuItem> = [
   {
     pages: [
       {
-        heading: "Dashboard",
+        heading: "dashboard",
         route: "/dashboard",
         keenthemesIcon: "element-11",
         bootstrapIcon: "bi-app-indicator",
+      },
+      {
+        heading: "emailReports",
+        route: "/email-reports",
+        keenthemesIcon: "sms",
+        bootstrapIcon: "bi-envelope",
+      },
+      {
+        heading: "breakTimeline",
+        route: "/breaks",
+        keenthemesIcon: "coffee",
+        bootstrapIcon: "bi-cup-hot",
       },
     ],
   },

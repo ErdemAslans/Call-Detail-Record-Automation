@@ -6,8 +6,28 @@
         <span v-if="title" class="fw-bold mb-2 text-gray-900">{{
           $t(title)
         }}</span>
+        <span class="text-muted fw-semibold fs-7">{{ periodBadge }}</span>
       </h3>
-      <div class="card-toolbar">
+      <div class="card-toolbar d-flex align-items-center gap-2">
+        <!--begin::Period Tabs-->
+        <div data-kt-buttons="true">
+          <a
+            class="btn btn-sm btn-color-muted btn-active btn-active-primary px-4 me-1"
+            :class="{ active: selectedPeriod === 'today' }"
+            @click="changePeriod('today')"
+          >{{ $t("daily") }}</a>
+          <a
+            class="btn btn-sm btn-color-muted btn-active btn-active-primary px-4 me-1"
+            :class="{ active: selectedPeriod === 'week' }"
+            @click="changePeriod('week')"
+          >{{ $t("weekly") }}</a>
+          <a
+            class="btn btn-sm btn-color-muted btn-active btn-active-primary px-4 me-1"
+            :class="{ active: selectedPeriod === 'month' }"
+            @click="changePeriod('month')"
+          >{{ $t("monthly") }}</a>
+        </div>
+        <!--end::Period Tabs-->
         <!--begin::Menu-->
         <button
           type="button"
@@ -220,7 +240,7 @@
 <script lang="ts">
 import { getAssetPath } from "@/core/helpers/assets";
 import { useUserStatisticsStore } from "@/stores/userStatistics";
-import { defineComponent, onMounted, ref, provide, watch } from "vue";
+import { computed, defineComponent, onMounted, ref, provide, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import UserStatistics from "./UserStatistics.vue";
 import ProfileReport from "./ProfileReport.vue";
@@ -252,9 +272,32 @@ export default defineComponent({
     const userInfo = ref<IUserInfo>({} as IUserInfo);
     const route = useRoute();
     const number = ref(props.operatorNumber ?? (route.params.number as string));
+    const selectedPeriod = ref<'today' | 'week' | 'month'>('month');
     const { start, end } = DateHelper.getDateRange('month');
     const startDate = ref(start);
     const endDate = ref(end);
+
+    const changePeriod = (period: 'today' | 'week' | 'month') => {
+      selectedPeriod.value = period;
+      const range = DateHelper.getDateRange(period);
+      startDate.value = range.start;
+      endDate.value = range.end;
+    };
+
+    const periodBadge = computed(() => {
+      const s = new Date(startDate.value);
+      const e = new Date(endDate.value);
+      const opts: Intl.DateTimeFormatOptions = {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        timeZone: 'Europe/Istanbul',
+      };
+      if (selectedPeriod.value === 'today') {
+        return s.toLocaleDateString('tr-TR', opts);
+      }
+      return `${s.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', timeZone: 'Europe/Istanbul' })} - ${e.toLocaleDateString('tr-TR', opts)}`;
+    });
 
     const updateDates = (newStartDate: string, newEndDate: string) => {
       startDate.value = newStartDate;
@@ -298,6 +341,9 @@ export default defineComponent({
       startDate,
       endDate,
       updateDates,
+      selectedPeriod,
+      changePeriod,
+      periodBadge,
     };
   },
 });

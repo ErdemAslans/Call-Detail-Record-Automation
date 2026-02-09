@@ -13,13 +13,7 @@
         )})`,
       }"
     >
-      <!--begin::Title-->
-      <h3 class="text-white fw-semibold mb-3">Quick Links</h3>
-      <!--end::Title-->
-
-      <!--begin::Status-->
-      <span class="badge bg-success py-2 px-3">25 pending tasks</span>
-      <!--end::Status-->
+      <h3 class="text-white fw-semibold mb-3">{{ $t("quickActions") }}</h3>
     </div>
     <!--end::Heading-->
 
@@ -27,71 +21,57 @@
     <div class="row g-0">
       <!--begin:Item-->
       <div class="col-6">
-        <a
-          href="#"
+        <router-link
+          to="/dashboard"
           class="d-flex flex-column flex-center h-100 p-6 bg-hover-light border-end border-bottom"
         >
-          <KTIcon icon-name="euro" icon-class="fs-3x text-success mb-2" />
-          <span class="fs-5 fw-semibold text-gray-800 mb-0">Accounting</span>
-          <span class="fs-7 text-gray-500">eCommerce</span>
-        </a>
+          <KTIcon icon-name="element-11" icon-class="fs-3x text-primary mb-2" />
+          <span class="fs-5 fw-semibold text-gray-800 mb-0">{{ $t("dashboard") }}</span>
+          <span class="fs-7 text-gray-500">CDR</span>
+        </router-link>
       </div>
       <!--end:Item-->
 
       <!--begin:Item-->
       <div class="col-6">
-        <a
-          href="#"
+        <router-link
+          to="/email-reports"
           class="d-flex flex-column flex-center h-100 p-6 bg-hover-light border-bottom"
         >
           <KTIcon icon-name="sms" icon-class="fs-3x text-success mb-2" />
-          <span class="fs-5 fw-semibold text-gray-800 mb-0"
-            >Administration</span
-          >
-          <span class="fs-7 text-gray-500">Console</span>
-        </a>
+          <span class="fs-5 fw-semibold text-gray-800 mb-0">{{ $t("generateReport") }}</span>
+          <span class="fs-7 text-gray-500">Excel / E-posta</span>
+        </router-link>
       </div>
       <!--end:Item-->
 
       <!--begin:Item-->
       <div class="col-6">
-        <a
-          href="#"
+        <router-link
+          to="/breaks"
           class="d-flex flex-column flex-center h-100 p-6 bg-hover-light border-end"
         >
-          <KTIcon
-            icon-name="abstract-41"
-            icon-class="fs-3x text-success mb-2"
-          />
-          <span class="fs-5 fw-semibold text-gray-800 mb-0">Projects</span>
-          <span class="fs-7 text-gray-500">Pending Tasks</span>
-        </a>
+          <KTIcon icon-name="coffee" icon-class="fs-3x text-warning mb-2" />
+          <span class="fs-5 fw-semibold text-gray-800 mb-0">{{ $t("breakStatus") }}</span>
+          <span class="fs-7 text-gray-500">{{ $t("breaks") }}</span>
+        </router-link>
       </div>
       <!--end:Item-->
 
       <!--begin:Item-->
       <div class="col-6">
-        <a
-          href="#"
+        <router-link
+          to="/dashboard"
           class="d-flex flex-column flex-center h-100 p-6 bg-hover-light"
         >
-          <KTIcon icon-name="briefcase" icon-class="fs-3x text-success mb-2" />
-          <span class="fs-5 fw-semibold text-gray-800 mb-0">Customers</span>
-          <span class="fs-7 text-gray-500">Latest cases</span>
-        </a>
+          <KTIcon icon-name="chart-simple" icon-class="fs-3x text-info mb-2" />
+          <span class="fs-5 fw-semibold text-gray-800 mb-0">{{ $t("departmentBreakdown") }}</span>
+          <span class="fs-7 text-gray-500">{{ $t("statistics") }}</span>
+        </router-link>
       </div>
       <!--end:Item-->
     </div>
     <!--end:Nav-->
-
-    <!--begin::View more-->
-    <div class="py-2 text-center border-top">
-      <a href="#" class="btn btn-color-gray-600 btn-active-color-primary">
-        View All
-        <KTIcon icon-name="arrow-right" icon-class="fs-5" />
-      </a>
-    </div>
-    <!--end::View more-->
   </div>
   <!--end::Menu-->
 </template>
