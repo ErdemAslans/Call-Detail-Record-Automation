@@ -62,6 +62,8 @@ public class CdrReportService : ICdrReportService
     private readonly IReportExecutionLogRepository _reportExecutionLogRepository;
     private readonly IHolidayCalendarRepository _holidayCalendarRepository;
     private readonly ICdrRecordsService _cdrRecordsService;
+    private readonly IBreakRepository _breakRepository;
+    private readonly IOperatorRepository _operatorRepository;
     private readonly ILogger<CdrReportService> _logger;
 
     public CdrReportService(
@@ -69,12 +71,16 @@ public class CdrReportService : ICdrReportService
         IReportExecutionLogRepository reportExecutionLogRepository,
         IHolidayCalendarRepository holidayCalendarRepository,
         ICdrRecordsService cdrRecordsService,
+        IBreakRepository breakRepository,
+        IOperatorRepository operatorRepository,
         ILogger<CdrReportService> logger)
     {
         _cdrRecordsRepository = cdrRecordsRepository;
         _reportExecutionLogRepository = reportExecutionLogRepository;
         _holidayCalendarRepository = holidayCalendarRepository;
         _cdrRecordsService = cdrRecordsService;
+        _breakRepository = breakRepository;
+        _operatorRepository = operatorRepository;
         _logger = logger;
     }
 
@@ -142,11 +148,14 @@ public class CdrReportService : ICdrReportService
 
             // Calculate metrics summary
             result.MetricsSummary = CalculateMetricsSummary(statistics);
-            result.RecordsProcessed = result.MetricsSummary.TotalIncomingCalls + 
+            result.RecordsProcessed = result.MetricsSummary.TotalIncomingCalls +
                                        result.MetricsSummary.TotalOutgoingCalls;
 
+            // Calculate break summaries
+            await PopulateBreakSummariesAsync(result.MetricsSummary, startDate, endDate);
+
             // Generate Excel file using existing extension method
-            result.ExcelData = statistics.ToExcelFile();
+            result.ExcelData = statistics.ToExcelFile(result.MetricsSummary.BreakSummaries);
             result.FileSizeBytes = result.ExcelData.Length;
             result.FileName = CdrReportHelper.GenerateReportFileName(
                 reportType.ToString(), 
@@ -251,6 +260,69 @@ public class CdrReportService : ICdrReportService
         summary.AfterHoursCalls = 0; // TODO: Calculate from CDR timestamps
 
         return summary;
+    }
+
+    /// <summary>
+    /// Populate break summaries per operator for the given period.
+    /// </summary>
+    private async Task PopulateBreakSummariesAsync(CdrReportMetricsSummary summary, DateTime startDate, DateTime endDate)
+    {
+        try
+        {
+            var (startUtc, endUtc) = TurkeyTimeProvider.ConvertDateRangeToUtc(startDate, endDate);
+            var breaks = await _breakRepository.GetAllBreaksByDateRangeAsync(startUtc, endUtc);
+
+            if (breaks.Count == 0) return;
+
+            // Map userId -> (Name, PhoneNumber) using Operator collection
+            var userIds = breaks.Select(b => b.UserId).Distinct().ToList();
+            var allOperators = await _operatorRepository.GetAllAsync();
+            var operatorMap = allOperators.ToDictionary(o => o.Id, o => o);
+
+            // Group breaks by userId
+            var grouped = breaks.GroupBy(b => b.UserId);
+            foreach (var group in grouped)
+            {
+                var userId = group.Key;
+                operatorMap.TryGetValue(userId, out var op);
+
+                var operatorSummary = new OperatorBreakSummary
+                {
+                    OperatorName = op?.Name ?? "Bilinmeyen",
+                    PhoneNumber = op?.PhoneNumber ?? "",
+                    BreakCount = group.Count()
+                };
+
+                double totalMinutes = 0;
+                foreach (var b in group.OrderBy(x => x.StartTime))
+                {
+                    var effectiveEnd = b.EndTime ?? b.PlannedEndTime;
+                    var duration = (effectiveEnd - b.StartTime).TotalMinutes;
+                    if (duration < 0) duration = 0;
+
+                    totalMinutes += duration;
+                    operatorSummary.Breaks.Add(new BreakDetail
+                    {
+                        StartTime = TurkeyTimeProvider.ConvertFromUtc(b.StartTime),
+                        EndTime = b.EndTime.HasValue ? TurkeyTimeProvider.ConvertFromUtc(b.EndTime.Value) : null,
+                        DurationMinutes = Math.Round(duration, 1),
+                        Reason = b.Reason
+                    });
+                }
+
+                operatorSummary.TotalDurationMinutes = Math.Round(totalMinutes, 1);
+                summary.BreakSummaries.Add(operatorSummary);
+            }
+
+            // Sort by break count descending
+            summary.BreakSummaries = summary.BreakSummaries.OrderByDescending(x => x.BreakCount).ToList();
+            summary.TotalBreakCount = summary.BreakSummaries.Sum(x => x.BreakCount);
+            summary.TotalBreakDurationMinutes = Math.Round(summary.BreakSummaries.Sum(x => x.TotalDurationMinutes), 1);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to populate break summaries for report. Continuing without break data.");
+        }
     }
 
     /// <inheritdoc />

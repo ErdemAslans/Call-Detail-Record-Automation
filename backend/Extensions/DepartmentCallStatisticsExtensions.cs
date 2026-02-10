@@ -122,6 +122,114 @@ public static class DepartmentCallStatisticsExtensions
         return package.GetAsByteArray();
     }
 
+    public static byte[] ToExcelFile(this DepartmentCallStatisticsByCallDirection statisticsByCallDirection, List<OperatorBreakSummary> breakSummaries)
+    {
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
+        using var package = new ExcelPackage();
+
+        void AddSheet(string sheetName, IEnumerable<DepartmentCallStatistics> statistics)
+        {
+            var worksheet = package.Workbook.Worksheets.Add(sheetName);
+
+            worksheet.Cells[1, 1].Value = "Departman Adı";
+            worksheet.Cells[2, 1].Value = "Toplam Çağrı";
+            worksheet.Cells[3, 1].Value = "Cevaplanan Çağrı";
+            worksheet.Cells[4, 1].Value = "Cevapsız Çağrı";
+            worksheet.Cells[5, 1].Value = "Molada Gelen Çağrı";
+            worksheet.Cells[6, 1].Value = "Cevaplama Oranı (%)";
+
+            var headerRange = worksheet.Cells[1, 1, 6, 1];
+            headerRange.Style.Font.Bold = true;
+            headerRange.Style.Fill.PatternType = ExcelFillStyle.Solid;
+            headerRange.Style.Fill.BackgroundColor.SetColor(Color.LightGray);
+
+            var column = 2;
+            foreach (var stat in statistics)
+            {
+                worksheet.Cells[1, column].Value = stat.DepartmentName;
+                worksheet.Cells[2, column].Value = stat.TotalCalls;
+                worksheet.Cells[3, column].Value = stat.AnsweredCalls;
+                worksheet.Cells[4, column].Value = stat.MissedCalls;
+                worksheet.Cells[5, column].Value = stat.OnBreakCalls;
+                worksheet.Cells[6, column].Value = stat.AnsweredCallRate / 100;
+                worksheet.Cells[6, column].Style.Numberformat.Format = "0.00%";
+                column++;
+            }
+
+            worksheet.Cells.AutoFitColumns();
+            var dataRange = worksheet.Cells[1, 1, 6, column - 1];
+            dataRange.Style.Border.Top.Style = ExcelBorderStyle.Thin;
+            dataRange.Style.Border.Left.Style = ExcelBorderStyle.Thin;
+            dataRange.Style.Border.Right.Style = ExcelBorderStyle.Thin;
+            dataRange.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
+        }
+
+        AddSheet("Incoming", statisticsByCallDirection.Incoming);
+        AddSheet("Outgoing", statisticsByCallDirection.Outgoing);
+        AddSheet("Internal", statisticsByCallDirection.Internal);
+
+        // Break summary sheet
+        if (breakSummaries.Count > 0)
+        {
+            var ws = package.Workbook.Worksheets.Add("Mola Özeti");
+
+            // Headers
+            ws.Cells[1, 1].Value = "Operatör";
+            ws.Cells[1, 2].Value = "Telefon";
+            ws.Cells[1, 3].Value = "Mola Sayısı";
+            ws.Cells[1, 4].Value = "Toplam Süre (dk)";
+            ws.Cells[1, 5].Value = "Mola Başlangıç";
+            ws.Cells[1, 6].Value = "Mola Bitiş";
+            ws.Cells[1, 7].Value = "Süre (dk)";
+            ws.Cells[1, 8].Value = "Sebep";
+
+            var bHeaderRange = ws.Cells[1, 1, 1, 8];
+            bHeaderRange.Style.Font.Bold = true;
+            bHeaderRange.Style.Fill.PatternType = ExcelFillStyle.Solid;
+            bHeaderRange.Style.Fill.BackgroundColor.SetColor(Color.LightGray);
+
+            var row = 2;
+            foreach (var opBreak in breakSummaries)
+            {
+                // Write operator summary row
+                ws.Cells[row, 1].Value = opBreak.OperatorName;
+                ws.Cells[row, 2].Value = opBreak.PhoneNumber;
+                ws.Cells[row, 3].Value = opBreak.BreakCount;
+                ws.Cells[row, 4].Value = Math.Round(opBreak.TotalDurationMinutes, 1);
+
+                // Write each break detail
+                foreach (var b in opBreak.Breaks)
+                {
+                    ws.Cells[row, 5].Value = b.StartTime;
+                    ws.Cells[row, 5].Style.Numberformat.Format = "yyyy-MM-dd HH:mm";
+                    ws.Cells[row, 6].Value = b.EndTime;
+                    ws.Cells[row, 6].Style.Numberformat.Format = "yyyy-MM-dd HH:mm";
+                    ws.Cells[row, 7].Value = Math.Round(b.DurationMinutes, 1);
+                    ws.Cells[row, 8].Value = b.Reason ?? "";
+                    row++;
+                }
+
+                if (opBreak.Breaks.Count == 0)
+                    row++;
+            }
+
+            // Border for all data
+            if (row > 2)
+            {
+                var allData = ws.Cells[1, 1, row - 1, 8];
+                allData.Style.Border.Top.Style = ExcelBorderStyle.Thin;
+                allData.Style.Border.Left.Style = ExcelBorderStyle.Thin;
+                allData.Style.Border.Right.Style = ExcelBorderStyle.Thin;
+                allData.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
+            }
+
+            ws.Cells.AutoFitColumns();
+        }
+
+        return package.GetAsByteArray();
+    }
+
     public static byte[] ToExcelFile(this UserSpecificReport report)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;

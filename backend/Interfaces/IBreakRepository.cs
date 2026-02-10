@@ -23,5 +23,7 @@ namespace Cdr.Api.Interfaces
         Task<List<Break>> GetBreaksByUserIdAndDateRangeAsync(string userId, DateTime startDate, DateTime endDate);
 
         Task<Break?> GetOngoingBreakAsync(string userId);
+
+        Task<List<Break>> GetAllBreaksByDateRangeAsync(DateTime startUtc, DateTime endUtc);
     }
 }

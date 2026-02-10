@@ -80,5 +80,14 @@ namespace Cdr.Api.Repositories
             );
             return await _collection.Find(filter).ToListAsync();
         }
+
+        public async Task<List<Break>> GetAllBreaksByDateRangeAsync(DateTime startUtc, DateTime endUtc)
+        {
+            var filter = Builders<Break>.Filter.And(
+                Builders<Break>.Filter.Gte(b => b.StartTime, startUtc),
+                Builders<Break>.Filter.Lt(b => b.StartTime, endUtc)
+            );
+            return await _collection.Find(filter).SortBy(b => b.StartTime).ToListAsync();
+        }
     }
 }

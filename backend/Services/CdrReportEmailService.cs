@@ -377,6 +377,41 @@ public class CdrReportEmailService : ICdrReportEmailService
             AddMetricRow(sb, "Toplam Giden Arama", report.MetricsSummary.TotalOutgoingCalls.ToString("N0"));
             
             sb.AppendLine("</table>");
+
+            // Break summary section
+            if (report.MetricsSummary.BreakSummaries.Count > 0)
+            {
+                sb.AppendLine("<h3 style=\"color: #1a5f7a;\">☕ Mola Özeti</h3>");
+                sb.AppendLine($"<p><strong>Toplam Mola Sayısı:</strong> {report.MetricsSummary.TotalBreakCount} &nbsp; | &nbsp; ");
+                sb.AppendLine($"<strong>Toplam Mola Süresi:</strong> {FormatMinutes(report.MetricsSummary.TotalBreakDurationMinutes)}</p>");
+
+                sb.AppendLine("<table style=\"width: 100%; border-collapse: collapse; margin-bottom: 20px;\">");
+                sb.AppendLine("<tr style=\"background-color: #1a5f7a; color: white;\">");
+                sb.AppendLine("<th style=\"padding: 8px; text-align: left;\">Operatör</th>");
+                sb.AppendLine("<th style=\"padding: 8px; text-align: center;\">Mola Sayısı</th>");
+                sb.AppendLine("<th style=\"padding: 8px; text-align: center;\">Toplam Süre</th>");
+                sb.AppendLine("<th style=\"padding: 8px; text-align: left;\">Mola Saatleri</th>");
+                sb.AppendLine("</tr>");
+
+                foreach (var opBreak in report.MetricsSummary.BreakSummaries)
+                {
+                    var breakTimes = string.Join("<br>", opBreak.Breaks.Select(b =>
+                    {
+                        var start = b.StartTime.ToString("HH:mm", trCulture);
+                        var end = b.EndTime?.ToString("HH:mm", trCulture) ?? "Devam";
+                        return $"{start} - {end} ({b.DurationMinutes:F0} dk)";
+                    }));
+
+                    sb.AppendLine("<tr>");
+                    sb.AppendLine($"<td style=\"padding: 8px; border-bottom: 1px solid #ddd;\">{opBreak.OperatorName}<br><small style=\"color: #666;\">{opBreak.PhoneNumber}</small></td>");
+                    sb.AppendLine($"<td style=\"padding: 8px; border-bottom: 1px solid #ddd; text-align: center; font-weight: bold;\">{opBreak.BreakCount}</td>");
+                    sb.AppendLine($"<td style=\"padding: 8px; border-bottom: 1px solid #ddd; text-align: center;\">{FormatMinutes(opBreak.TotalDurationMinutes)}</td>");
+                    sb.AppendLine($"<td style=\"padding: 8px; border-bottom: 1px solid #ddd; font-size: 12px;\">{breakTimes}</td>");
+                    sb.AppendLine("</tr>");
+                }
+
+                sb.AppendLine("</table>");
+            }
         }
 
         // File info
@@ -407,6 +442,15 @@ public class CdrReportEmailService : ICdrReportEmailService
         sb.AppendLine($"<td style=\"padding: 8px; border-bottom: 1px solid #ddd;\">{label}</td>");
         sb.AppendLine($"<td style=\"padding: 8px; border-bottom: 1px solid #ddd; text-align: right; font-weight: bold;\">{value}</td>");
         sb.AppendLine("</tr>");
+    }
+
+    private string FormatMinutes(double totalMinutes)
+    {
+        var hours = (int)(totalMinutes / 60);
+        var minutes = (int)(totalMinutes % 60);
+        if (hours > 0)
+            return $"{hours} sa {minutes} dk";
+        return $"{minutes} dk";
     }
 
     private string FormatFileSize(long bytes)
