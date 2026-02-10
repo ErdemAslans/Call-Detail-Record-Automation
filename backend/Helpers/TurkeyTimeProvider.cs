@@ -41,20 +41,24 @@ public static class TurkeyTimeProvider
 
     /// <summary>
     /// Gets the start of day (midnight) in Turkey timezone, returned as UTC.
-    /// Use this when frontend sends a date like "2026-01-11" meaning Turkey local midnight.
+    /// Handles any DateTimeKind: if UTC, first converts to Turkey local before truncating.
     /// </summary>
-    public static DateTime GetStartOfDayUtc(DateTime turkeyDate)
+    public static DateTime GetStartOfDayUtc(DateTime date)
     {
+        // If the input is UTC (e.g., from ISO 8601 parsing), convert to Turkey local first
+        var turkeyDate = date.Kind == DateTimeKind.Utc ? ConvertFromUtc(date) : date;
         var startOfDay = turkeyDate.Date;
         return ConvertToUtc(startOfDay);
     }
 
     /// <summary>
     /// Gets the end of day (next day midnight) in Turkey timezone, returned as UTC.
+    /// Handles any DateTimeKind: if UTC, first converts to Turkey local before truncating.
     /// Use Lt (less than) with this value for exclusive end boundary.
     /// </summary>
-    public static DateTime GetEndOfDayUtc(DateTime turkeyDate)
+    public static DateTime GetEndOfDayUtc(DateTime date)
     {
+        var turkeyDate = date.Kind == DateTimeKind.Utc ? ConvertFromUtc(date) : date;
         var endOfDay = turkeyDate.Date.AddDays(1);
         return ConvertToUtc(endOfDay);
     }

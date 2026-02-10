@@ -75,9 +75,12 @@ class DateHelper {
     };
 
     const selectedRange = ranges[range];
+    // Send plain YYYY-MM-DD Turkey local dates to avoid double timezone conversion.
+    // Backend's TurkeyTimeProvider.ConvertDateRangeToUtc expects Turkey local dates.
+    const fmt = (d: Date) => d.toLocaleDateString('en-CA', { timeZone: 'Europe/Istanbul' });
     return {
-      start: selectedRange.start.toISOString(),
-      end: selectedRange.end.toISOString(),
+      start: fmt(selectedRange.start),
+      end: fmt(selectedRange.end),
     };
   };
 
