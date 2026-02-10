@@ -925,6 +925,16 @@ const messages = {
     tooltipOnBreakCalls: "Operatör moladayken gelen çağrılar - cevapsız olarak sayılmaz",
     tooltipAnswerRate: "Cevaplanan çağrıların yüzdesi. Molada gelen çağrılar hesaplamaya dahil edilmez",
     tooltipTotalDuration: "Bugünkü tüm cevaplanan çağrıların toplam görüşme süresi",
+    // Breadcrumb & page title keys
+    Reports: "Raporlar",
+    "Email Reports": "E-posta Raporları",
+    // Report execution history - missing keys
+    reportType_Daily: "Günlük",
+    reportType_Yearly: "Yıllık",
+    execStatus_Pending: "Bekliyor",
+    execStatus_Timeout: "Zaman Aşımı",
+    trigger_OnDemand: "Manuel",
+    trigger_ManualRerun: "Tekrar Çalıştırma",
     // Missing keys
     Dashboard: "Gösterge Paneli",
     about: "Hakkında",

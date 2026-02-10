@@ -450,6 +450,22 @@ const messages = {
     breakEndTimeFuture: "End time must be in the future",
     breakMaxDuration: "Break duration cannot exceed 4 hours",
     onBreakCallCount: "On Break Call Count",
+    // Tooltip descriptions
+    tooltipTotalCalls: "Total number of all calls (incoming, outgoing, internal) for today",
+    tooltipAnsweredCalls: "Calls that were connected and answered by an operator",
+    tooltipMissedCalls: "Calls that were not answered (excludes on-break calls)",
+    tooltipOnBreakCalls: "Calls that came in while the operator was on break - not counted as missed",
+    tooltipAnswerRate: "Percentage of answered calls. On-break calls are excluded from the calculation",
+    tooltipTotalDuration: "Total talk time of all answered calls for today",
+    // Missing keys
+    Dashboard: "Dashboard",
+    about: "About",
+    breaks_ongoingBreak: "Ongoing Break",
+    user_fetchDepartments: "Departments fetched",
+    userStatistics_breakTimesFetched: "Break times fetched",
+    user_fetchOperators: "Operators fetched",
+    userStatistics_userNonWorkHourStatisticsFetched: "Non-work hour statistics fetched",
+    userStatistics_userWorkHourStatisticsFetched: "Work hour statistics fetched",
   },
   tr: {
     dashboard: "Gösterge Paneli",
@@ -902,6 +918,32 @@ const messages = {
     breakEndTimeFuture: "Bitiş saati gelecekte olmalıdır",
     breakMaxDuration: "Mola süresi en fazla 4 saat olabilir",
     onBreakCallCount: "Molada Gelen Çağrı",
+    // Tooltip descriptions
+    tooltipTotalCalls: "Bugün gelen tüm çağrıların toplamı (gelen, giden, iç hat)",
+    tooltipAnsweredCalls: "Operatör tarafından bağlantı kurulup cevaplanan çağrılar",
+    tooltipMissedCalls: "Cevaplanmayan çağrılar (molada gelen çağrılar hariç)",
+    tooltipOnBreakCalls: "Operatör moladayken gelen çağrılar - cevapsız olarak sayılmaz",
+    tooltipAnswerRate: "Cevaplanan çağrıların yüzdesi. Molada gelen çağrılar hesaplamaya dahil edilmez",
+    tooltipTotalDuration: "Bugünkü tüm cevaplanan çağrıların toplam görüşme süresi",
+    // Breadcrumb & page title keys
+    Reports: "Raporlar",
+    "Email Reports": "E-posta Raporları",
+    // Report execution history - missing keys
+    reportType_Daily: "Günlük",
+    reportType_Yearly: "Yıllık",
+    execStatus_Pending: "Bekliyor",
+    execStatus_Timeout: "Zaman Aşımı",
+    trigger_OnDemand: "Manuel",
+    trigger_ManualRerun: "Tekrar Çalıştırma",
+    // Missing keys
+    Dashboard: "Gösterge Paneli",
+    about: "Hakkında",
+    breaks_ongoingBreak: "Devam Eden Mola",
+    user_fetchDepartments: "Departmanlar getirildi",
+    userStatistics_breakTimesFetched: "Mola süreleri getirildi",
+    user_fetchOperators: "Operatörler getirildi",
+    userStatistics_userNonWorkHourStatisticsFetched: "Mesai dışı istatistikleri getirildi",
+    userStatistics_userWorkHourStatisticsFetched: "Mesai içi istatistikleri getirildi",
   },
 };
 
