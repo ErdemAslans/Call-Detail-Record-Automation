@@ -21,12 +21,14 @@ public class CdrRecordsRepository : ReadonlyMongoRepository<CdrRecord>, ICdrReco
 {
     private readonly IMongoCollection<Operator> _userCollection;
     private readonly IMongoCollection<Department> _departmentCollection;
+    private readonly IMongoCollection<Break> _breakCollection;
 
     public CdrRecordsRepository(MongoDbContext context, IOptions<MongoDbSettings> mongoDbSettings)
         : base(context, mongoDbSettings.Value.CollectionName)
     {
         _userCollection = context.GetCollection<Operator>("users");
         _departmentCollection = context.GetCollection<Department>("departments");
+        _breakCollection = context.GetCollection<Break>(mongoDbSettings.Value.BreakCollectionName);
     }
 
     /// <summary>
@@ -359,11 +361,50 @@ public class CdrRecordsRepository : ReadonlyMongoRepository<CdrRecord>, ICdrReco
             return new DailyCallReport();
         }
 
+        var originalMissedCalls = aggregate["missedCalls"].AsInt32;
+
+        // Cross-check missed calls against break times
+        var breaksByPhone = await GetBreaksByPhoneNumberAsync(startDateUtc, endDateUtc);
+        var onBreakCount = 0;
+
+        if (breaksByPhone.Count > 0)
+        {
+            // Get missed calls with their origination time and target number
+            var missedFilter = Builders<CdrRecord>.Filter.And(
+                filter,
+                Builders<CdrRecord>.Filter.Eq(x => x.DateTime!.Connect, null)
+            );
+            var missedCalls = await _collection.Find(missedFilter)
+                .Project(Builders<CdrRecord>.Projection
+                    .Include(x => x.DateTime!.Origination)
+                    .Include(x => x.FinalCalledParty!.Number)
+                    .Include(x => x.OriginalCalledParty!.Number))
+                .ToListAsync();
+
+            foreach (var call in missedCalls)
+            {
+                var origination = call["dateTime"]["origination"].ToUniversalTime();
+                var finalNumber = call.Contains("finalCalledParty") && !call["finalCalledParty"].IsBsonNull
+                    ? call["finalCalledParty"]["number"].AsString : null;
+                var originalNumber = call.Contains("originalCalledParty") && !call["originalCalledParty"].IsBsonNull
+                    ? call["originalCalledParty"]["number"].AsString : null;
+
+                // Check if the called party was on break
+                var numberToCheck = finalNumber ?? originalNumber;
+                if (numberToCheck != null && breaksByPhone.TryGetValue(numberToCheck, out var breaks))
+                {
+                    if (IsCallDuringBreak(origination, breaks))
+                        onBreakCount++;
+                }
+            }
+        }
+
         return new DailyCallReport
         {
             TotalCalls = aggregate["totalCalls"].AsInt32,
             AnsweredCalls = aggregate["answeredCalls"].AsInt32,
-            MissedCalls = aggregate["missedCalls"].AsInt32,
+            MissedCalls = originalMissedCalls - onBreakCount,
+            OnBreakCalls = onBreakCount,
             TotalDuration = aggregate["totalDuration"].AsInt32
         };
     }
@@ -594,13 +635,36 @@ public class CdrRecordsRepository : ReadonlyMongoRepository<CdrRecord>, ICdrReco
         var maxDuration = durationAggregate?["maxDuration"].AsInt32 ?? 0;
         var avgDuration = durationAggregate?["avgDuration"].AsDouble ?? 0;
 
+        // Cross-check missed calls against this operator's breaks
+        var onBreakCallCount = 0;
+        var breaksByPhone = await GetBreaksByPhoneNumberAsync(startUtc, endUtc);
+        if (breaksByPhone.TryGetValue(number, out var userBreaks) && missedCallCount > 0)
+        {
+            // Get missed calls for this operator with origination times
+            var missedCallsFilter = Builders<CdrRecord>.Filter.And(
+                incomingFilter,
+                Builders<CdrRecord>.Filter.Eq(x => x.Duration, 0)
+            );
+            var missedCallDocs = await _collection.Find(missedCallsFilter)
+                .Project(Builders<CdrRecord>.Projection.Include(x => x.DateTime!.Origination))
+                .ToListAsync();
+
+            foreach (var call in missedCallDocs)
+            {
+                var origination = call["dateTime"]["origination"].ToUniversalTime();
+                if (IsCallDuringBreak(origination, userBreaks))
+                    onBreakCallCount++;
+            }
+        }
+
         return new NumberStatistics
         {
             Number = number,
             IncomingCallCount = totalIncomingCount + (int)redirectedCount, // Total incoming = answered + missed + redirected
             AnsweredCallCount = answeredCallCount,
-            MissedCallCount = missedCallCount,
+            MissedCallCount = missedCallCount - onBreakCallCount,
             RedirectedCallCount = (int)redirectedCount,
+            OnBreakCallCount = onBreakCallCount,
             MinDuration = minDuration,
             MaxDuration = maxDuration,
             AvgDuration = avgDuration
@@ -779,8 +843,12 @@ public class CdrRecordsRepository : ReadonlyMongoRepository<CdrRecord>, ICdrReco
 
         var (workHours, nonWorkHours) = SeparateCallsByWorkHours(resultItems);
 
-        var workHoursStatistics = CalculateCallStatistics(workHours, filter.Number!);
-        var nonWorkHoursStatistics = CalculateCallStatistics(nonWorkHours, filter.Number!);
+        // Fetch breaks for this operator to cross-check missed calls
+        var breaksByPhone = await GetBreaksByPhoneNumberAsync(startUtc, endUtc);
+        breaksByPhone.TryGetValue(filter.Number!, out var operatorBreaks);
+
+        var workHoursStatistics = CalculateCallStatistics(workHours, filter.Number!, operatorBreaks);
+        var nonWorkHoursStatistics = CalculateCallStatistics(nonWorkHours, filter.Number!, operatorBreaks);
 
         var breakTimes = GetBreakTimes(workHours, filter.Number!);
 
@@ -816,23 +884,35 @@ public class CdrRecordsRepository : ReadonlyMongoRepository<CdrRecord>, ICdrReco
         return (workHours, nonWorkHours);
     }
 
-    private CallStatistics CalculateCallStatistics(List<UserCallListItem> calls, string number)
+    private CallStatistics CalculateCallStatistics(List<UserCallListItem> calls, string number, List<Break>? operatorBreaks = null)
     {
         var totalCalls = calls.Count;
         var incomingCalls = calls.Where(call => call.CallDirection == CallDirection.Incoming).ToList();
         var answeredCalls = incomingCalls.Count(call => call.Duration > 0 && call.FinalCalledPartyNumber == number);
-        // var missedCalls = incomingCalls.Count - answeredCalls;
         var missedCalls = incomingCalls.Count(call => call.Duration == 0 && call.FinalCalledPartyNumber == number);
         var redirectedCalls = incomingCalls.Count(call => call.OriginalCalledPartyNumber == number && call.FinalCalledPartyNumber != number);
         var totalDuration = calls.Sum(call => call.Duration);
+
+        // Cross-check missed calls against breaks
+        var onBreakCalls = 0;
+        if (operatorBreaks != null && operatorBreaks.Count > 0)
+        {
+            var missedCallList = incomingCalls.Where(call => call.Duration == 0 && call.FinalCalledPartyNumber == number);
+            foreach (var call in missedCallList)
+            {
+                if (IsCallDuringBreak(call.DateTimeOrigination, operatorBreaks))
+                    onBreakCalls++;
+            }
+        }
 
         return new CallStatistics
         {
             TotalCalls = totalCalls,
             IncomingCalls = incomingCalls.Count,
             AnsweredCalls = answeredCalls,
-            MissedCalls = missedCalls,
+            MissedCalls = missedCalls - onBreakCalls,
             RedirectedCalls = redirectedCalls,
+            OnBreakCalls = onBreakCalls,
             TotalDuration = totalDuration
         };
     }
@@ -903,6 +983,9 @@ public class CdrRecordsRepository : ReadonlyMongoRepository<CdrRecord>, ICdrReco
 
         users = users.DistinctBy(u => u.PhoneNumber).ToList();
 
+        // Fetch all breaks in this time range for on-break call detection
+        var breaksByPhone = await GetBreaksByPhoneNumberAsync(startUtc, endUtc);
+
         var departmentCalls = new DepartmentCallStatisticsByCallDirection
         {
             Incoming = cdrList
@@ -914,13 +997,27 @@ public class CdrRecordsRepository : ReadonlyMongoRepository<CdrRecord>, ICdrReco
                 })
                 .Where(x => x.User != null && x.User.Department != null)
                 .GroupBy(x => x.User.Department.Id)
-                .Select(g => new DepartmentCallStatistics
+                .Select(g =>
                 {
-                    DepartmentName = g.First().User.Department.Name,
-                    TotalCalls = g.Count(),
-                    AnsweredCalls = g.Count(x => x.cdr.DateTime.Connect != null && x.cdr.Duration > 0),
-                    MissedCalls = g.Count(x => x.cdr.DateTime.Connect == null || x.cdr.Duration == 0),
-                    AnsweredCallRate = g.Count() > 0 ? (double)g.Count(x => x.cdr.DateTime.Connect != null && x.cdr.Duration > 0) / g.Count() * 100 : 0,
+                    var total = g.Count();
+                    var answered = g.Count(x => x.cdr.DateTime.Connect != null && x.cdr.Duration > 0);
+                    var missed = g.Count(x => x.cdr.DateTime.Connect == null || x.cdr.Duration == 0);
+                    // Count on-break calls: missed calls where the called party was on break
+                    var onBreak = g.Count(x =>
+                        (x.cdr.DateTime.Connect == null || x.cdr.Duration == 0) &&
+                        x.cdr.DateTime.Origination.HasValue &&
+                        x.User?.PhoneNumber != null &&
+                        breaksByPhone.TryGetValue(x.User.PhoneNumber, out var userBreaks) &&
+                        IsCallDuringBreak(x.cdr.DateTime.Origination.Value, userBreaks));
+                    return new DepartmentCallStatistics
+                    {
+                        DepartmentName = g.First().User.Department.Name,
+                        TotalCalls = total,
+                        AnsweredCalls = answered,
+                        MissedCalls = missed - onBreak,
+                        OnBreakCalls = onBreak,
+                        AnsweredCallRate = (total - onBreak) > 0 ? Math.Round((double)answered / (total - onBreak) * 100, 2) : 0,
+                    };
                 }).ToList(),
             Outgoing = cdrList
                 .Where(cdr => cdr.CallDirection == CallDirection.Outgoing)
@@ -937,7 +1034,7 @@ public class CdrRecordsRepository : ReadonlyMongoRepository<CdrRecord>, ICdrReco
                     TotalCalls = g.Count(),
                     AnsweredCalls = g.Count(x => x.cdr.DateTime.Connect != null && x.cdr.Duration > 0),
                     MissedCalls = g.Count(x => x.cdr.DateTime.Connect == null || x.cdr.Duration == 0),
-                    AnsweredCallRate = g.Count() > 0 ? (double)g.Count(x => x.cdr.DateTime.Connect != null && x.cdr.Duration > 0) / g.Count() * 100 : 0,
+                    AnsweredCallRate = g.Count() > 0 ? Math.Round((double)g.Count(x => x.cdr.DateTime.Connect != null && x.cdr.Duration > 0) / g.Count() * 100, 2) : 0,
                 }).ToList(),
             Internal = cdrList
                 .Where(cdr => cdr.CallDirection == CallDirection.Internal)
@@ -954,10 +1051,74 @@ public class CdrRecordsRepository : ReadonlyMongoRepository<CdrRecord>, ICdrReco
                     TotalCalls = g.Count(),
                     AnsweredCalls = g.Count(x => x.cdr.DateTime.Connect != null && x.cdr.Duration > 0),
                     MissedCalls = g.Count(x => x.cdr.DateTime.Connect == null || x.cdr.Duration == 0),
-                    AnsweredCallRate = g.Count() > 0 ? (double)g.Count(x => x.cdr.DateTime.Connect != null && x.cdr.Duration > 0) / g.Count() * 100 : 0,
+                    AnsweredCallRate = g.Count() > 0 ? Math.Round((double)g.Count(x => x.cdr.DateTime.Connect != null && x.cdr.Duration > 0) / g.Count() * 100, 2) : 0,
                 }).ToList()
         };
 
         return departmentCalls;
+    }
+
+    /// <summary>
+    /// Retrieves all breaks that overlap with the given UTC time range.
+    /// Returns breaks grouped by user's phone number for efficient lookup.
+    /// </summary>
+    private async Task<Dictionary<string, List<Break>>> GetBreaksByPhoneNumberAsync(DateTime startUtc, DateTime endUtc)
+    {
+        // Find breaks that overlap with the time range
+        var breakFilter = Builders<Break>.Filter.And(
+            Builders<Break>.Filter.Lt(b => b.StartTime, endUtc),
+            Builders<Break>.Filter.Or(
+                // Break still ongoing (endTime is null) - use plannedEndTime for range check
+                Builders<Break>.Filter.And(
+                    Builders<Break>.Filter.Eq(b => b.EndTime, null),
+                    Builders<Break>.Filter.Gt(b => b.PlannedEndTime, startUtc)
+                ),
+                // Break ended - endTime > startUtc
+                Builders<Break>.Filter.And(
+                    Builders<Break>.Filter.Ne(b => b.EndTime, null),
+                    Builders<Break>.Filter.Gt(b => b.EndTime, startUtc)
+                )
+            )
+        );
+
+        var breaks = await _breakCollection.Find(breakFilter).ToListAsync();
+        if (breaks.Count == 0) return new Dictionary<string, List<Break>>();
+
+        // Get user phone numbers for these breaks
+        var userIds = breaks.Select(b => b.UserId).Distinct().ToList();
+        var userFilter = Builders<Operator>.Filter.In(u => u.Id, userIds);
+        var users = await _userCollection.Find(userFilter).ToListAsync();
+        var userPhoneMap = users.ToDictionary(u => u.Id, u => u.PhoneNumber);
+
+        // Group breaks by phone number
+        var result = new Dictionary<string, List<Break>>();
+        foreach (var b in breaks)
+        {
+            if (userPhoneMap.TryGetValue(b.UserId, out var phone))
+            {
+                if (!result.ContainsKey(phone))
+                    result[phone] = new List<Break>();
+                result[phone].Add(b);
+            }
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// Checks if a call origination time falls within any of the given breaks.
+    /// Uses the effective end time: EndTime if break was ended, PlannedEndTime otherwise.
+    /// For old breaks without PlannedEndTime, falls back to EndTime.
+    /// </summary>
+    private static bool IsCallDuringBreak(DateTime callOrigination, List<Break> breaks)
+    {
+        foreach (var b in breaks)
+        {
+            var effectiveEnd = b.EndTime ?? b.PlannedEndTime;
+            // For old records without plannedEndTime (default DateTime), skip
+            if (effectiveEnd == default) continue;
+            if (callOrigination >= b.StartTime && callOrigination <= effectiveEnd)
+                return true;
+        }
+        return false;
     }
 }

@@ -169,6 +169,38 @@
         </div>
         <!--end::MissedCalls-->
 
+        <!--begin::OnBreakCalls-->
+        <div class="d-flex align-items-center mb-7">
+          <!--begin::Symbol-->
+          <div class="symbol symbol-45px w-40px me-5">
+            <span class="symbol-label bg-lighten">
+              <KTIcon icon-name="coffee" icon-class="fs-1 text-warning" />
+            </span>
+          </div>
+          <!--end::Symbol-->
+
+          <!--begin::Description-->
+          <div class="d-flex align-items-center flex-wrap w-100">
+            <!--begin::Title-->
+            <div class="mb-1 pe-3 flex-grow-1">
+              <a href="#" class="fs-5 text-warning fw-bold">
+                {{ $t("onBreakCalls") }}</a
+              >
+            </div>
+            <!--end::Title-->
+
+            <!--begin::Label-->
+            <div class="d-flex align-items-center">
+              <div class="fw-bold fs-5 text-warning pe-1">
+                {{ workHourStatistics.onBreakCalls ?? 0 }}
+              </div>
+            </div>
+            <!--end::Label-->
+          </div>
+          <!--end::Description-->
+        </div>
+        <!--end::OnBreakCalls-->
+
         <!--begin::RedirectedCalls-->
         <div class="d-flex align-items-center mb-7">
           <!--begin::Symbol-->

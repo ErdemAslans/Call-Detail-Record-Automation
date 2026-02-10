@@ -5,56 +5,52 @@ using Microsoft.Extensions.Options;
 
 public class EmailNotification : INotification<EmailMessage>
 {
-    private readonly EmailSettings _settings;
-    private readonly SemaphoreSlim _sendLock = new(1, 1);
+    private readonly SmtpClient _smtpClient;
+    private readonly string _from;
 
     public EmailNotification(IOptions<EmailSettings> emailSettings)
     {
-        _settings = emailSettings.Value;
+        var settings = emailSettings.Value;
+        
+        _smtpClient = new SmtpClient(settings.Host, settings.Port)
+        {
+            UseDefaultCredentials = false,
+            EnableSsl = false // No SSL for relay
+        };
+        
+        // Only set credentials if username/password are provided
+        if (!string.IsNullOrEmpty(settings.UserName) && !string.IsNullOrEmpty(settings.Password))
+        {
+            _smtpClient.Credentials = new System.Net.NetworkCredential(settings.UserName, settings.Password);
+        }
+
+        _from = settings.From;
     }
 
     public async Task SendAsync(EmailMessage email)
     {
         foreach (var to in email.To)
         {
-            await _sendLock.WaitAsync();
-            try
+            var mailMessage = new MailMessage
             {
-                using var smtpClient = new SmtpClient(_settings.Host, _settings.Port)
-                {
-                    UseDefaultCredentials = false,
-                    EnableSsl = false
-                };
+                From = new MailAddress(_from),
+                Subject = email.Subject,
+                Body = email.Body,
+                IsBodyHtml = true
+            };
 
-                if (!string.IsNullOrEmpty(_settings.UserName) && !string.IsNullOrEmpty(_settings.Password))
-                {
-                    smtpClient.Credentials = new System.Net.NetworkCredential(_settings.UserName, _settings.Password);
-                }
+            mailMessage.To.Add(to);
 
-                using var mailMessage = new MailMessage
-                {
-                    From = new MailAddress(_settings.From),
-                    Subject = email.Subject,
-                    Body = email.Body,
-                    IsBodyHtml = true
-                };
-
-                mailMessage.To.Add(to);
-
-                foreach (var attachmentPath in email.Attachments)
-                {
-                    if (File.Exists(attachmentPath))
-                    {
-                        mailMessage.Attachments.Add(new Attachment(attachmentPath));
-                    }
-                }
-
-                await smtpClient.SendMailAsync(mailMessage);
-            }
-            finally
+            // Add attachments if any
+            foreach (var attachmentPath in email.Attachments)
             {
-                _sendLock.Release();
+                if (File.Exists(attachmentPath))
+                {
+                    mailMessage.Attachments.Add(new Attachment(attachmentPath));
+                }
             }
+
+            await _smtpClient.SendMailAsync(mailMessage);
         }
     }
 }

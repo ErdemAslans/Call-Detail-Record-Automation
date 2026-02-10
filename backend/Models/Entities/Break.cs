@@ -19,6 +19,9 @@ namespace Cdr.Api.Models.Entities
         [BsonElement("endTime")]
         public DateTime? EndTime { get; set; }
 
+        [BsonElement("plannedEndTime")]
+        public DateTime PlannedEndTime { get; set; }
+
         [BsonElement("reason")]
         public string? Reason { get; set; }
 

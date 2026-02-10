@@ -11,13 +11,15 @@ public class NumberStatistics
     public int MissedCallCount { get; set; }
     
     public int RedirectedCallCount { get; set; }
-    
+
+    public int OnBreakCallCount { get; set; }
+
     /// <summary>
-    /// Answered Call Rate = Answered / (Incoming - Redirected) × 100
-    /// Consistent with CallStatistics calculation
+    /// Answered Call Rate = Answered / (Incoming - Redirected - OnBreak) × 100
+    /// Calls during break are excluded from answer rate calculation
     /// </summary>
-    public double AnsweredCallRatio => (IncomingCallCount - RedirectedCallCount) > 0 
-        ? Math.Round((double)AnsweredCallCount / (IncomingCallCount - RedirectedCallCount) * 100, 2) 
+    public double AnsweredCallRatio => (IncomingCallCount - RedirectedCallCount - OnBreakCallCount) > 0
+        ? Math.Round((double)AnsweredCallCount / (IncomingCallCount - RedirectedCallCount - OnBreakCallCount) * 100, 2)
         : 0;
     
     public int MinDuration { get; set; }

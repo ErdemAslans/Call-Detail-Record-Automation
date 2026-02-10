@@ -178,6 +178,30 @@
                   <!--begin::Number-->
                   <div class="d-flex align-items-center">
                     <KTIcon
+                      icon-name="coffee"
+                      icon-class="fs-3 text-warning me-2"
+                    />
+                    <div class="fs-2 fw-bold">
+                      {{ userStatistics?.onBreakCallCount ?? 0 }}
+                    </div>
+                  </div>
+                  <!--end::Number-->
+
+                  <!--begin::Label-->
+                  <div class="fw-semibold fs-6 text-gray-500">
+                    {{ translate("onBreakCallCount") }}
+                  </div>
+                  <!--end::Label-->
+                </div>
+                <!--end::Stat-->
+
+                <!--begin::Stat-->
+                <div
+                  class="border border-gray-300 border-dashed rounded min-w-125px py-3 px-4 me-6 mb-3"
+                >
+                  <!--begin::Number-->
+                  <div class="d-flex align-items-center">
+                    <KTIcon
                       icon-name="arrow-up"
                       icon-class="fs-3 text-success me-2"
                     />

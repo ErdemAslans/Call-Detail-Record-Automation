@@ -6,6 +6,7 @@ namespace Cdr.Api.Models.Response;
         public required string UserId { get; set; }
         public DateTime StartTime { get; set; }
         public DateTime? EndTime { get; set; }
+        public DateTime PlannedEndTime { get; set; }
         public string? Reason { get; set; }
     }
 

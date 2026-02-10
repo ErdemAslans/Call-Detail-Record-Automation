@@ -143,7 +143,7 @@
           ></button>
         </div>
         <div class="modal-body">
-          <div class="mb-3">
+          <div class="mb-5">
             <label for="breakReason" class="form-label">{{
               $t("breaks_reason")
             }}</label>
@@ -159,6 +159,22 @@
             </div>
             <small class="text-muted">{{ $t("breaks_reasonMinLength") }}</small>
           </div>
+          <div class="mb-3">
+            <label for="plannedEndTime" class="form-label required">{{
+              $t("plannedEndTime")
+            }}</label>
+            <input
+              type="time"
+              class="form-control"
+              id="plannedEndTime"
+              v-model="plannedEndTimeLocal"
+              :class="{ 'is-invalid': plannedEndTimeError }"
+            />
+            <div class="invalid-feedback" v-if="plannedEndTimeError">
+              {{ plannedEndTimeError }}
+            </div>
+            <small class="text-muted">{{ $t("breakMaxDuration") }}</small>
+          </div>
         </div>
         <div class="modal-footer">
           <button
@@ -172,7 +188,7 @@
             type="button"
             class="btn btn-danger"
             @click="submitBreakReason"
-            :disabled="breakReason.length < 10"
+            :disabled="breakReason.length < 10 || !plannedEndTimeLocal"
           >
             {{ $t("save") }}
           </button>
@@ -203,6 +219,8 @@ export default defineComponent({
     const ongoingBreakId = ref<string | null>(null);
     const breakReason = ref("");
     const breakReasonError = ref("");
+    const plannedEndTimeLocal = ref("");
+    const plannedEndTimeError = ref("");
     const breakModal = ref<Modal | null>(null);
     const formatDate = (date: Date): string => date.toISOString().split("T")[0];
     type DateRange = "today" | "week" | "month" | "year";
@@ -271,9 +289,17 @@ export default defineComponent({
       await checkOngoingBreak();
     };
 
+    const getDefaultPlannedEndTime = (): string => {
+      const now = new Date();
+      now.setMinutes(now.getMinutes() + 30);
+      return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    };
+
     const startNewBreak = async () => {
       breakReason.value = "";
       breakReasonError.value = "";
+      plannedEndTimeLocal.value = getDefaultPlannedEndTime();
+      plannedEndTimeError.value = "";
 
       // Initialize and show the modal
       if (!breakModal.value) {
@@ -291,8 +317,34 @@ export default defineComponent({
         return;
       }
 
+      if (!plannedEndTimeLocal.value) {
+        plannedEndTimeError.value = i18n.global.t("breakEndTimeRequired");
+        return;
+      }
+
+      // Convert local time input to UTC ISO string
+      const [hours, minutes] = plannedEndTimeLocal.value.split(":").map(Number);
+      const plannedEnd = new Date();
+      plannedEnd.setHours(hours, minutes, 0, 0);
+
+      if (plannedEnd <= new Date()) {
+        plannedEndTimeError.value = i18n.global.t("breakEndTimeFuture");
+        return;
+      }
+
+      const diffHours = (plannedEnd.getTime() - Date.now()) / (1000 * 60 * 60);
+      if (diffHours > 4) {
+        plannedEndTimeError.value = i18n.global.t("breakMaxDuration");
+        return;
+      }
+
+      plannedEndTimeError.value = "";
+
       try {
-        await breaksTimeStore.startNewBreak(breakReason.value);
+        await breaksTimeStore.startNewBreak(
+          breakReason.value,
+          plannedEnd.toISOString(),
+        );
         breakModal.value?.hide();
         await fetchBreaksAndUpdateStatus();
       } catch (error: any) {
@@ -340,6 +392,8 @@ export default defineComponent({
       fetchBreaksAndUpdateStatus,
       breakReason,
       breakReasonError,
+      plannedEndTimeLocal,
+      plannedEndTimeError,
       submitBreakReason,
     };
   },

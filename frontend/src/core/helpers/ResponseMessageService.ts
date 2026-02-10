@@ -42,13 +42,13 @@ class ResponseMessageService {
   }
 
   public static showMessageByType(message, type): Promise<string> {
-    return new Promise((resolve) => {
+    return new Promise(() => {
       ElMessage({
         showClose: true,
         message: i18n.global.t(message),
         type: type,
       });
-      resolve(message);
+      Promise.resolve(message);
     });
   }
 

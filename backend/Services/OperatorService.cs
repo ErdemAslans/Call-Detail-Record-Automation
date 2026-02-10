@@ -42,7 +42,7 @@ namespace Cdr.Api.Services
             return await _departmentRepository.GetAllAsync();
         }
 
-        public async Task<(bool Success, BreakResponseModel? BreakInfo, string? Message)> StartBreakAsync(string username, string? reason)
+        public async Task<(bool Success, BreakResponseModel? BreakInfo, string? Message)> StartBreakAsync(string username, string? reason, DateTime plannedEndTime)
         {
             var user = await _operatorRepository.GetUserByUsernameAsync(username);
             if (await _breakRepository.HasOngoingBreakAsync(user.Id))
@@ -50,10 +50,21 @@ namespace Cdr.Api.Services
                 return (false, null, "User already has an ongoing break.");
             }
 
+            if (plannedEndTime <= DateTime.UtcNow)
+            {
+                return (false, null, "Planned end time must be in the future.");
+            }
+
+            if ((plannedEndTime - DateTime.UtcNow).TotalHours > 4)
+            {
+                return (false, null, "Break duration cannot exceed 4 hours.");
+            }
+
             var breakInfo = new Break
             {
                 UserId = user.Id,
                 StartTime = DateTime.UtcNow,
+                PlannedEndTime = plannedEndTime,
                 Reason = reason
             };
             await _breakRepository.StartBreakAsync(breakInfo);

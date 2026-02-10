@@ -41,9 +41,9 @@ export const useBreaksStore = defineStore("breaks", () => {
       });
   }
 
-  function startNewBreak(reason: string): Promise<any> {
+  function startNewBreak(reason: string, plannedEndTime: string): Promise<any> {
     const url = `${apiUrlConstants.START_NEW_BREAK}`;
-    return ApiService.post(url, { reason })
+    return ApiService.post(url, { reason, plannedEndTime })
       .then(() => {
         ResponseMessageService.showMessageByType(
           "breaks_startNewBreak",

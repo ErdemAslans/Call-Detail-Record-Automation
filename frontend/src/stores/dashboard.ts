@@ -8,6 +8,7 @@ export interface DailyCallReport {
   totalCalls: number;
   answeredCalls: number;
   missedCalls: number;
+  onBreakCalls: number;
   totalDuration: number;
   answeredCallRate: number;
   averageCallDuration: number;

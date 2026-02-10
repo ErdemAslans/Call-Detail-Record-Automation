@@ -35,7 +35,7 @@ public interface IOperatorService
     /// <param name="username">The username of the operator taking a break</param>
     /// <param name="reason">Optional reason for the break</param>
     /// <returns>A tuple containing success status, break information, and a message</returns>
-    Task<(bool Success, BreakResponseModel? BreakInfo, string? Message)> StartBreakAsync(string username, string? reason);
+    Task<(bool Success, BreakResponseModel? BreakInfo, string? Message)> StartBreakAsync(string username, string? reason, DateTime plannedEndTime);
 
     /// <summary>
     /// Registers the end of an operator's break period

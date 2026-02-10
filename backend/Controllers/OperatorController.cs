@@ -58,7 +58,7 @@ public class OperatorController : ControllerBase
         try
         {
             var username = User.FindFirst(ClaimTypes.Name)?.Value;
-            var (success, breakInfo, message) = await _operatorService.StartBreakAsync(username, request?.Reason);
+            var (success, breakInfo, message) = await _operatorService.StartBreakAsync(username, request?.Reason, request!.PlannedEndTime);
 
             if (!success)
             {

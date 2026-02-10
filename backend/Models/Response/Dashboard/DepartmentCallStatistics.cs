@@ -16,6 +16,9 @@ public class DepartmentCallStatistics
     [BsonElement("missedCalls")]
     public int MissedCalls { get; set; }
 
+    [BsonElement("onBreakCalls")]
+    public int OnBreakCalls { get; set; }
+
     [BsonElement("answeredCallRate")]
     public double AnsweredCallRate { get; set; }
 } 

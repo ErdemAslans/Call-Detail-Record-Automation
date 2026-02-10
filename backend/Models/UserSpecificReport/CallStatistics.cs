@@ -11,8 +11,10 @@ public class CallStatistics
     public int MissedCalls { get; set; }
 
     public int RedirectedCalls { get; set; }
-    
-    public double AnsweredCallRate => IncomingCalls - RedirectedCalls == 0 ? 0 : Math.Round((double)AnsweredCalls / (IncomingCalls - RedirectedCalls) * 100, 2);
-    
+
+    public int OnBreakCalls { get; set; }
+
+    public double AnsweredCallRate => (IncomingCalls - RedirectedCalls - OnBreakCalls) <= 0 ? 0 : Math.Round((double)AnsweredCalls / (IncomingCalls - RedirectedCalls - OnBreakCalls) * 100, 2);
+
     public int? TotalDuration { get; set; }
 }

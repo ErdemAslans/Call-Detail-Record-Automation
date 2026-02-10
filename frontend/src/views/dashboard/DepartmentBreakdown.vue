@@ -70,6 +70,9 @@
               <th class="p-0 min-w-80px text-center">
                 <span class="text-muted fw-semibold fs-7">{{ translate("departmentMissedCalls") }}</span>
               </th>
+              <th class="p-0 min-w-80px text-center">
+                <span class="text-muted fw-semibold fs-7">{{ translate("departmentOnBreakCalls") }}</span>
+              </th>
               <th class="p-0 min-w-100px text-center">
                 <span class="text-muted fw-semibold fs-7">{{ translate("departmentAnswerRate") }}</span>
               </th>
@@ -88,6 +91,9 @@
               </td>
               <td class="text-center">
                 <span class="badge badge-light-danger fs-7 fw-bold">{{ dept.missedCalls }}</span>
+              </td>
+              <td class="text-center">
+                <span class="badge badge-light-warning fs-7 fw-bold">{{ dept.onBreakCalls ?? 0 }}</span>
               </td>
               <td class="text-center">
                 <div class="d-flex align-items-center justify-content-center">
@@ -124,6 +130,7 @@ interface DepartmentStat {
   totalCalls: number;
   answeredCalls: number;
   missedCalls: number;
+  onBreakCalls: number;
   answeredCallRate: number;
 }
 

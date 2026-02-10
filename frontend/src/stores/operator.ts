@@ -35,8 +35,8 @@ export const useOperatorStore = defineStore("user", () => {
         );
         operators.value = data;
       })
-      .catch((error: any) => {
-        setError(error.response?.data?.errors || { general: "Bir hata oluştu" });
+      .catch(({ response }) => {
+        setError(response.data.errors);
       });
   }
 
@@ -50,8 +50,8 @@ export const useOperatorStore = defineStore("user", () => {
         );
         departments.value = data;
       })
-      .catch((error: any) => {
-        setError(error.response?.data?.errors || { general: "Bir hata oluştu" });
+      .catch(({ response }) => {
+        setError(response.data.errors);
       });
   }
 
