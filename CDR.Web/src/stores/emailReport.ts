@@ -1,0 +1,319 @@
+import { ref, computed } from "vue";
+import { defineStore } from "pinia";
+import ApiService from "@/core/services/ApiService";
+import { apiUrlConstants } from "@/stores/consts/ApiUrlConstants";
+import ResponseMessageService from "@/core/helpers/ResponseMessageService";
+
+/**
+ * Email report types enum
+ */
+export type ReportType = "weekly" | "monthly";
+
+/**
+ * Metrics summary returned from report generation
+ */
+export interface CdrReportMetricsSummary {
+  totalIncomingCalls: number;
+  totalAnsweredCalls: number;
+  totalMissedCalls: number;
+  totalOutgoingCalls: number;
+  answerRate: number;
+  workHoursCalls: number;
+  afterHoursCalls: number;
+}
+
+/**
+ * Report generation response
+ */
+export interface CdrEmailReportResponse {
+  executionId: string;
+  reportType: string;
+  periodStartDate: string;
+  periodEndDate: string;
+  generatedAt: string;
+  fileName: string;
+  fileSizeBytes: number;
+  recordsProcessed: number;
+  generationDurationMs: number;
+  metricsSummary: CdrReportMetricsSummary;
+  errorMessage: string | null;
+  isSuccess: boolean;
+}
+
+/**
+ * Email delivery status per recipient
+ */
+export interface EmailDeliveryStatus {
+  recipientEmail: string;
+  deliveryStatus: "Pending" | "Sent" | "Failed" | "Retrying";
+  attemptCount: number;
+  lastAttemptAt: string | null;
+  errorMessage: string | null;
+}
+
+/**
+ * Send email report response
+ */
+export interface SendEmailReportResponse {
+  executionId: string;
+  totalRecipients: number;
+  successfulDeliveries: number;
+  failedDeliveries: number;
+  deliveryStatuses: EmailDeliveryStatus[];
+}
+
+/**
+ * Report execution history item
+ */
+export interface ReportExecutionHistory {
+  id: string;
+  reportType: string;
+  triggerType: string;
+  periodStartDate: string;
+  periodEndDate: string;
+  executionStatus: string;
+  startedAt: string;
+  completedAt: string | null;
+  recordsProcessed: number | null;
+  fileSizeBytes: number | null;
+  totalEmailRecipients: number;
+  successfulEmailDeliveries: number;
+  failedEmailDeliveries: number;
+  errorMessage: string | null;
+}
+
+/**
+ * Report request parameters
+ */
+export interface GenerateReportRequest {
+  reportType: ReportType;
+  startDate?: string;
+  endDate?: string;
+}
+
+/**
+ * Send email request parameters
+ */
+export interface SendEmailRequest {
+  executionId: string;
+  recipients: string[];
+}
+
+/**
+ * Email Report Store
+ * Manages state for CDR email report generation and delivery
+ */
+export const useEmailReportStore = defineStore("emailReport", () => {
+  // State
+  const errors = ref<Record<string, string>>({});
+  const isLoading = ref(false);
+  const isGenerating = ref(false);
+  const isSending = ref(false);
+  const currentReport = ref<CdrEmailReportResponse | null>(null);
+  const deliveryStatus = ref<SendEmailReportResponse | null>(null);
+  const executionHistory = ref<ReportExecutionHistory[]>([]);
+
+  // Getters
+  const hasCurrentReport = computed(() => currentReport.value !== null);
+  const hasDeliveryStatus = computed(() => deliveryStatus.value !== null);
+  
+  const formattedPeriod = computed(() => {
+    if (!currentReport.value) return "";
+    const start = new Date(currentReport.value.periodStartDate);
+    const end = new Date(currentReport.value.periodEndDate);
+    return `${start.toLocaleDateString("tr-TR")} - ${end.toLocaleDateString("tr-TR")}`;
+  });
+
+  const metricsDisplayData = computed(() => {
+    if (!currentReport.value?.metricsSummary) return [];
+    const m = currentReport.value.metricsSummary;
+    return [
+      { label: "Toplam Gelen Arama", value: m.totalIncomingCalls, color: "primary" },
+      { label: "Cevaplanan", value: m.totalAnsweredCalls, color: "success" },
+      { label: "Kaçırılan", value: m.totalMissedCalls, color: "danger" },
+      { label: "Giden Arama", value: m.totalOutgoingCalls, color: "info" },
+      { label: "Cevaplama Oranı", value: `${m.answerRate}%`, color: "warning" },
+    ];
+  });
+
+  // Actions
+  function setError(error: Record<string, string>) {
+    errors.value = { ...error };
+  }
+
+  function clearError() {
+    errors.value = {};
+  }
+
+  function clearReport() {
+    currentReport.value = null;
+    deliveryStatus.value = null;
+    clearError();
+  }
+
+  /**
+   * Generate a CDR email report
+   */
+  async function generateReport(request: GenerateReportRequest): Promise<CdrEmailReportResponse | null> {
+    isGenerating.value = true;
+    clearError();
+
+    try {
+      const { data } = await ApiService.post(apiUrlConstants.GENERATE_EMAIL_REPORT, request);
+      currentReport.value = data;
+      
+      if (data.isSuccess) {
+        ResponseMessageService.showMessageByType("emailReport_generated", "success");
+      } else {
+        setError({ generation: data.errorMessage || "Rapor oluşturulamadı" });
+      }
+      
+      return data;
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error?.message || "Rapor oluşturulurken hata oluştu";
+      setError({ generation: errorMessage });
+      return null;
+    } finally {
+      isGenerating.value = false;
+    }
+  }
+
+  /**
+   * Generate weekly report for previous week
+   */
+  async function generateWeeklyReport(): Promise<CdrEmailReportResponse | null> {
+    return generateReport({ reportType: "weekly" });
+  }
+
+  /**
+   * Generate monthly report for previous month
+   */
+  async function generateMonthlyReport(): Promise<CdrEmailReportResponse | null> {
+    return generateReport({ reportType: "monthly" });
+  }
+
+  /**
+   * Send the current report via email
+   */
+  async function sendReport(recipients: string[]): Promise<SendEmailReportResponse | null> {
+    if (!currentReport.value?.executionId) {
+      setError({ send: "Önce bir rapor oluşturmalısınız" });
+      return null;
+    }
+
+    isSending.value = true;
+    clearError();
+
+    try {
+      const request: SendEmailRequest = {
+        executionId: currentReport.value.executionId,
+        recipients,
+      };
+      
+      const { data } = await ApiService.post(apiUrlConstants.SEND_EMAIL_REPORT, request);
+      deliveryStatus.value = data;
+      
+      if (data.failedDeliveries === 0) {
+        ResponseMessageService.showMessageByType("emailReport_sent", "success");
+      } else if (data.successfulDeliveries > 0) {
+        ResponseMessageService.showMessageByType("emailReport_partialSent", "warning");
+      } else {
+        ResponseMessageService.showMessageByType("emailReport_sendFailed", "error");
+      }
+      
+      return data;
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error?.message || "E-posta gönderilirken hata oluştu";
+      setError({ send: errorMessage });
+      return null;
+    } finally {
+      isSending.value = false;
+    }
+  }
+
+  /**
+   * Fetch report execution history
+   */
+  async function fetchExecutionHistory(count = 20): Promise<ReportExecutionHistory[]> {
+    isLoading.value = true;
+
+    try {
+      const url = `${apiUrlConstants.REPORT_EXECUTION_HISTORY}?count=${count}`;
+      const { data } = await ApiService.get(url);
+      executionHistory.value = data;
+      return data;
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error?.message || "Geçmiş yüklenemedi";
+      setError({ history: errorMessage });
+      return [];
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /**
+   * Download a report by execution ID
+   */
+  async function downloadReport(executionId: string): Promise<void> {
+    try {
+      const url = `${apiUrlConstants.DOWNLOAD_REPORT}/${executionId}`;
+      const response = await ApiService.get(url);
+      
+      // Create blob and trigger download
+      const blob = new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      
+      // Extract filename from response headers or use default
+      const contentDisposition = response.headers?.["content-disposition"];
+      let fileName = `cdr-report-${executionId}.xlsx`;
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (match && match[1]) {
+          fileName = match[1].replace(/['"]/g, "");
+        }
+      }
+      
+      link.setAttribute("download", fileName);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+      
+      ResponseMessageService.showMessageByType("emailReport_downloaded", "success");
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error?.message || "Rapor indirilemedi";
+      setError({ download: errorMessage });
+    }
+  }
+
+  return {
+    // State
+    errors,
+    isLoading,
+    isGenerating,
+    isSending,
+    currentReport,
+    deliveryStatus,
+    executionHistory,
+    // Getters
+    hasCurrentReport,
+    hasDeliveryStatus,
+    formattedPeriod,
+    metricsDisplayData,
+    // Actions
+    setError,
+    clearError,
+    clearReport,
+    generateReport,
+    generateWeeklyReport,
+    generateMonthlyReport,
+    sendReport,
+    fetchExecutionHistory,
+    downloadReport,
+  };
+});

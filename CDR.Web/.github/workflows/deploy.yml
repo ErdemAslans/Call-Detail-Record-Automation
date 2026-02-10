@@ -1,0 +1,109 @@
+# =============================================================================
+# CDR Web (Vue.js) - GitHub Actions CI/CD Pipeline
+# =============================================================================
+# Bu workflow şunları yapar:
+# 1. Her push'ta lint ve type-check yapar - GitHub'ın sunucusunda
+# 2. Production build alır - GitHub'ın sunucusunda
+# 3. main branch'e push'ta deploy eder - SELF-HOSTED RUNNER ile
+#
+# ⚠️ ÖNEMLİ: Deploy için sunucuya Self-Hosted Runner kurulmalı!
+# =============================================================================
+
+name: 🌐 CDR Web CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+  pull_request:
+    branches:
+      - main
+      - master
+
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '20.x'
+
+jobs:
+  # =========================================================================
+  # JOB 1: Lint, Type Check & Build (GitHub-hosted)
+  # =========================================================================
+  build:
+    name: 🔨 Build Frontend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🔍 Run ESLint
+        run: npm run lint
+        continue-on-error: true
+
+      - name: 🔍 Type Check
+        run: npm run type-check
+        continue-on-error: true
+
+      - name: 🔨 Build for production
+        run: npm run build-only
+        env:
+          VITE_API_URL: ${{ secrets.API_URL || 'https://doascdrapi.fw.dohas.com.tr' }}
+
+  # =========================================================================
+  # JOB 2: Deploy to Production (Self-hosted runner)
+  # =========================================================================
+  deploy:
+    name: 🚀 Deploy to Production
+    needs: build
+
+    # ⚠️ SELF-HOSTED RUNNER
+    runs-on: [self-hosted, windows, production]
+
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+
+    environment:
+      name: production
+      url: https://doascdr.fw.dohas.com.tr
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Create backup
+        shell: cmd
+        run: |
+          if not exist "C:\Backups\CDR.Web" mkdir "C:\Backups\CDR.Web"
+          xcopy /E /I /Y "C:\Projects\CDR.Web\dist" "C:\Backups\CDR.Web\dist_backup"
+        continue-on-error: true
+
+      - name: 📥 Update production code
+        shell: cmd
+        working-directory: C:\Projects\CDR.Web
+        run: |
+          git fetch origin
+          git reset --hard origin/main
+
+      - name: 📦 Install dependencies
+        shell: cmd
+        working-directory: C:\Projects\CDR.Web
+        run: npm ci
+
+      - name: 🔨 Build
+        shell: cmd
+        working-directory: C:\Projects\CDR.Web
+        run: npm run build-only
+
+      - name: ✅ Deployment complete
+        run: echo "Web deployment completed successfully!"

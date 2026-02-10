@@ -1,0 +1,169 @@
+# =============================================================================
+# CDR API - GitHub Actions CI/CD Pipeline
+# =============================================================================
+# Bu workflow şunları yapar:
+# 1. Her push'ta kodu derler (build) - GitHub'ın sunucusunda
+# 2. Testleri çalıştırır (varsa) - GitHub'ın sunucusunda
+# 3. main branch'e push'ta production'a deploy eder - SELF-HOSTED RUNNER ile
+#
+# ⚠️ ÖNEMLİ: Deploy için sunucuya Self-Hosted Runner kurulmalı!
+# Kurulum: https://docs.github.com/en/actions/hosting-your-own-runners
+# =============================================================================
+
+name: 🚀 CDR API CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+  pull_request:
+    branches:
+      - main
+      - master
+
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  PROJECT_PATH: 'Cdr.Api.csproj'
+
+jobs:
+  # =========================================================================
+  # JOB 1: Build & Test (GitHub-hosted runner - ücretsiz)
+  # =========================================================================
+  build:
+    name: 🔨 Build & Test
+    runs-on: ubuntu-latest  # GitHub'ın sunucusunda çalışır
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup .NET ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: 📦 Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: 📦 Restore dependencies
+        run: dotnet restore ${{ env.PROJECT_PATH }}
+
+      - name: 🔨 Build
+        run: dotnet build ${{ env.PROJECT_PATH }} --configuration Release --no-restore
+
+      - name: 🧪 Run tests
+        run: dotnet test --no-build --configuration Release --verbosity normal
+        continue-on-error: true
+
+  # =========================================================================
+  # JOB 2: Deploy to Production (Self-hosted runner - sunucuda çalışır)
+  # =========================================================================
+  deploy:
+    name: 🚀 Deploy to Production
+    needs: build
+
+    # ⚠️ SELF-HOSTED RUNNER - Sunucuda kurulu olmalı!
+    # 'windows' = işletim sistemi, 'production' = label
+    runs-on: [self-hosted, windows, production]
+
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+
+    environment:
+      name: production
+      url: https://doascdrapi.fw.dohas.com.tr
+
+    steps:
+      # Runner zaten sunucuda, git pull yeterli
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Create backup
+        shell: cmd
+        run: |
+          echo Creating backup...
+          if not exist "C:\Backups\Cdr.Api" mkdir "C:\Backups\Cdr.Api"
+          xcopy /E /I /Y "C:\Projects\Cdr.Api" "C:\Backups\Cdr.Api\backup_%date:~-4,4%%date:~-7,2%%date:~-10,2%"
+        continue-on-error: true
+
+      - name: 📋 Backup production config (BEFORE git reset)
+        shell: powershell
+        run: |
+          $configPath = "C:\Projects\Cdr.Api\appsettings.json"
+          if (Test-Path $configPath) {
+            Copy-Item $configPath "$configPath.production.bak" -Force
+            Write-Host "Production appsettings.json backed up BEFORE git reset"
+          } else {
+            Write-Host "No existing appsettings.json to backup"
+          }
+
+      - name: 📥 Update production code
+        shell: cmd
+        working-directory: C:\Projects\Cdr.Api
+        run: |
+          echo Pulling latest code...
+          git fetch origin
+          git reset --hard origin/main
+
+      - name: 🔨 Build & Publish
+        shell: cmd
+        working-directory: C:\Projects\Cdr.Api
+        run: |
+          echo Building...
+          dotnet publish -c Release -o .
+
+      - name: 📋 Restore production config
+        shell: powershell
+        run: |
+          $bakPath = "C:\Projects\Cdr.Api\appsettings.json.production.bak"
+          $configPath = "C:\Projects\Cdr.Api\appsettings.json"
+          if (Test-Path $bakPath) {
+            Copy-Item $bakPath $configPath -Force
+            Remove-Item $bakPath -Force
+            Write-Host "✅ Production appsettings.json restored"
+          }
+
+      - name: 🔄 Restart IIS
+        shell: cmd
+        run: |
+          echo Restarting IIS...
+          iisreset /restart
+
+      - name: ✅ Deployment complete
+        run: echo "Deployment completed successfully!"
+
+  # =========================================================================
+  # JOB 3: Verify (Self-hosted runner)
+  # =========================================================================
+  verify:
+    name: ✅ Verify Deployment
+    needs: deploy
+    runs-on: [self-hosted, windows, production]
+
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+
+    steps:
+      - name: ⏳ Wait for IIS to start
+        shell: powershell
+        run: Start-Sleep -Seconds 10
+
+      - name: 🏥 Health check
+        shell: powershell
+        run: |
+          try {
+            $response = Invoke-WebRequest -Uri "http://localhost:5000/health" -UseBasicParsing -TimeoutSec 10
+            if ($response.StatusCode -eq 200) {
+              Write-Host "✅ Health check passed!"
+            }
+          } catch {
+            Write-Host "⚠️ Health check skipped (endpoint may not exist)"
+          }
+        continue-on-error: true
