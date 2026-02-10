@@ -8,6 +8,7 @@ public class CdrReportMetricsSummary
     public int TotalIncomingCalls { get; set; }
     public int TotalAnsweredCalls { get; set; }
     public int TotalMissedCalls { get; set; }
+    public int TotalOnBreakCalls { get; set; }
     public int TotalOutgoingCalls { get; set; }
     public double AnswerRate { get; set; }
     public int WorkHoursCalls { get; set; }

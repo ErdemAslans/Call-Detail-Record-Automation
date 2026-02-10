@@ -372,6 +372,7 @@ public class CdrReportEmailService : ICdrReportEmailService
             AddMetricRow(sb, "Toplam Gelen Arama", report.MetricsSummary.TotalIncomingCalls.ToString("N0"));
             AddMetricRow(sb, "Cevaplanan Arama", report.MetricsSummary.TotalAnsweredCalls.ToString("N0"));
             AddMetricRow(sb, "Cevapsız Arama", report.MetricsSummary.TotalMissedCalls.ToString("N0"));
+            AddMetricRow(sb, "Molada Gelen Çağrı", report.MetricsSummary.TotalOnBreakCalls.ToString("N0"));
             AddMetricRow(sb, "Cevaplama Oranı", $"{report.MetricsSummary.AnswerRate:F1}%");
             AddMetricRow(sb, "Toplam Giden Arama", report.MetricsSummary.TotalOutgoingCalls.ToString("N0"));
             

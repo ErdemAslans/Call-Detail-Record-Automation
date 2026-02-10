@@ -224,6 +224,7 @@ public class CdrReportService : ICdrReportService
                 summary.TotalIncomingCalls += dept.TotalCalls;
                 summary.TotalAnsweredCalls += dept.AnsweredCalls;
                 summary.TotalMissedCalls += dept.MissedCalls;
+                summary.TotalOnBreakCalls += dept.OnBreakCalls;
             }
         }
 
