@@ -935,6 +935,14 @@ const messages = {
     execStatus_Timeout: "Zaman Aşımı",
     trigger_OnDemand: "Manuel",
     trigger_ManualRerun: "Tekrar Çalıştırma",
+    // Break summary in report preview
+    breakSummary: "Mola Özeti",
+    breakCount: "mola",
+    breakCountShort: "Mola Sayısı",
+    totalDurationShort: "Toplam Süre",
+    breakDetails: "Mola Detayları",
+    operatorName: "Operatör",
+    phone: "Telefon",
     // Missing keys
     Dashboard: "Gösterge Paneli",
     about: "Hakkında",

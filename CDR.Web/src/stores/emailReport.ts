@@ -12,14 +12,33 @@ export type ReportType = "weekly" | "monthly";
 /**
  * Metrics summary returned from report generation
  */
+export interface BreakDetail {
+  startTime: string;
+  endTime: string | null;
+  durationMinutes: number;
+  reason: string | null;
+}
+
+export interface OperatorBreakSummary {
+  operatorName: string;
+  phoneNumber: string;
+  breakCount: number;
+  totalDurationMinutes: number;
+  breaks: BreakDetail[];
+}
+
 export interface CdrReportMetricsSummary {
   totalIncomingCalls: number;
   totalAnsweredCalls: number;
   totalMissedCalls: number;
+  totalOnBreakCalls: number;
   totalOutgoingCalls: number;
   answerRate: number;
   workHoursCalls: number;
   afterHoursCalls: number;
+  breakSummaries: OperatorBreakSummary[];
+  totalBreakCount: number;
+  totalBreakDurationMinutes: number;
 }
 
 /**
@@ -131,6 +150,7 @@ export const useEmailReportStore = defineStore("emailReport", () => {
       { label: "Toplam Gelen Arama", value: m.totalIncomingCalls, color: "primary" },
       { label: "Cevaplanan", value: m.totalAnsweredCalls, color: "success" },
       { label: "Kaçırılan", value: m.totalMissedCalls, color: "danger" },
+      { label: "Molada Gelen", value: m.totalOnBreakCalls, color: "dark" },
       { label: "Giden Arama", value: m.totalOutgoingCalls, color: "info" },
       { label: "Cevaplama Oranı", value: `${m.answerRate}%`, color: "warning" },
     ];

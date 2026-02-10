@@ -160,6 +160,54 @@
           </div>
         </div>
 
+        <!-- Break Summary Section -->
+        <div v-if="breakSummaries.length > 0" class="mb-8">
+          <div class="d-flex align-items-center mb-5">
+            <span class="fs-4 me-2">☕</span>
+            <h5 class="fs-5 fw-bold mb-0">{{ translate("breakSummary") }}</h5>
+            <span class="badge badge-light-dark ms-3">
+              {{ totalBreakCount }} {{ translate("breakCount") }} · {{ formatMinutes(totalBreakDurationMinutes) }}
+            </span>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-row-bordered table-row-gray-200 align-middle gs-0 gy-3">
+              <thead>
+                <tr class="fw-bold text-muted bg-light">
+                  <th class="ps-4 rounded-start">{{ translate("operatorName") }}</th>
+                  <th>{{ translate("phone") }}</th>
+                  <th class="text-center">{{ translate("breakCountShort") }}</th>
+                  <th class="text-center">{{ translate("totalDurationShort") }}</th>
+                  <th class="rounded-end">{{ translate("breakDetails") }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="op in breakSummaries" :key="op.operatorName">
+                  <td class="ps-4">
+                    <span class="fw-semibold text-dark">{{ op.operatorName }}</span>
+                  </td>
+                  <td>
+                    <span class="text-muted fs-7">{{ op.phoneNumber || "-" }}</span>
+                  </td>
+                  <td class="text-center">
+                    <span class="badge badge-light-primary">{{ op.breakCount }}</span>
+                  </td>
+                  <td class="text-center">
+                    <span class="fw-semibold">{{ formatMinutes(op.totalDurationMinutes) }}</span>
+                  </td>
+                  <td>
+                    <div v-for="(b, i) in op.breaks" :key="i" class="fs-8 text-muted">
+                      {{ formatTime(b.startTime) }} - {{ b.endTime ? formatTime(b.endTime) : '...' }}
+                      <span class="text-dark">({{ formatMinutes(b.durationMinutes) }})</span>
+                      <span v-if="b.reason" class="badge badge-light-info ms-1 fs-9">{{ b.reason }}</span>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <!-- Download Button -->
         <div class="d-flex justify-content-center gap-3 mb-8">
           <button
@@ -304,7 +352,7 @@
 import { ref, computed } from "vue";
 import { useI18n } from "vue-i18n";
 import { storeToRefs } from "pinia";
-import { useEmailReportStore, type ReportType } from "@/stores/emailReport";
+import { useEmailReportStore, type ReportType, type OperatorBreakSummary } from "@/stores/emailReport";
 import KTIcon from "@/core/helpers/kt-icon/KTIcon.vue";
 
 // i18n
@@ -380,6 +428,31 @@ const getStatusBadgeClass = (status: string): string => {
     default:
       return "badge-light-info";
   }
+};
+
+// Break summary computed
+const breakSummaries = computed<OperatorBreakSummary[]>(() => {
+  return currentReport.value?.metricsSummary?.breakSummaries ?? [];
+});
+
+const totalBreakCount = computed(() => {
+  return currentReport.value?.metricsSummary?.totalBreakCount ?? 0;
+});
+
+const totalBreakDurationMinutes = computed(() => {
+  return currentReport.value?.metricsSummary?.totalBreakDurationMinutes ?? 0;
+});
+
+const formatMinutes = (totalMinutes: number): string => {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = Math.round(totalMinutes % 60);
+  if (hours > 0) return `${hours} sa ${minutes} dk`;
+  return `${minutes} dk`;
+};
+
+const formatTime = (dateStr: string): string => {
+  const d = new Date(dateStr);
+  return d.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
 };
 
 // Handlers
