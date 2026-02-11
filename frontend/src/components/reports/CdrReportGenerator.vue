@@ -345,7 +345,6 @@ const translate = (text: string) => (te(text) ? t(text) : text);
 const emailReportStore = useEmailReportStore();
 const {
   isGenerating,
-  isSending,
   currentReport,
   deliveryStatus,
   errors,
