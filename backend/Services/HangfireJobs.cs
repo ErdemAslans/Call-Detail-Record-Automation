@@ -123,7 +123,7 @@ namespace Cdr.Api.Services
         /// </summary>
         [AutomaticRetry(Attempts = 1)]
         [JobDisplayName("On-Demand CDR Email Report")]
-        Task SendOnDemandReportAsync(DateTime startDate, DateTime endDate, string reportType, List<string> recipients);
+        Task SendOnDemandReportAsync(DateTime startDate, DateTime endDate, string reportType, List<string> recipients, Guid originalExecutionId);
 
         /// <summary>
         /// Generate and send daily operator report.
@@ -291,39 +291,43 @@ namespace Cdr.Api.Services
 
         /// <inheritdoc />
         public async Task SendOnDemandReportAsync(
-            DateTime startDate, 
-            DateTime endDate, 
-            string reportType, 
-            List<string> recipients)
+            DateTime startDate,
+            DateTime endDate,
+            string reportType,
+            List<string> recipients,
+            Guid originalExecutionId)
         {
             _logger.LogInformation(
-                "Starting on-demand {ReportType} report job for period {Start} - {End}",
-                reportType, startDate, endDate);
-            
+                "Starting on-demand {ReportType} report job for period {Start} - {End}, originalExecutionId: {OriginalId}",
+                reportType, startDate, endDate, originalExecutionId);
+
             using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(MaxExecutionMinutes));
-            
+
             try
             {
                 // Parse report type
-                var period = reportType.Equals("Monthly", StringComparison.OrdinalIgnoreCase) 
-                    ? Common.Enums.ReportPeriod.Monthly 
+                var period = reportType.Equals("Monthly", StringComparison.OrdinalIgnoreCase)
+                    ? Common.Enums.ReportPeriod.Monthly
                     : Common.Enums.ReportPeriod.Weekly;
 
                 // Generate report
                 var report = await _reportService.GenerateReportAsync(startDate, endDate, period);
-                
+
                 if (!report.IsSuccess)
                 {
                     _logger.LogError("On-demand report generation failed: {Error}", report.ErrorMessage);
                     throw new Exception($"Report generation failed: {report.ErrorMessage}");
                 }
 
+                // Override the execution ID so email delivery stats are written to the ORIGINAL log
+                report.ExecutionId = originalExecutionId;
+
                 // Send to specified recipients
                 var deliveryResult = await _emailService.SendReportEmailAsync(report, recipients, "OnDemand");
-                
+
                 _logger.LogInformation(
-                    "On-demand CDR report job completed. Emails sent: {Success}/{Total}",
-                    deliveryResult.SuccessfulDeliveries, deliveryResult.TotalRecipients);
+                    "On-demand CDR report job completed. Emails sent: {Success}/{Total}, originalExecutionId: {OriginalId}",
+                    deliveryResult.SuccessfulDeliveries, deliveryResult.TotalRecipients, originalExecutionId);
             }
             catch (OperationCanceledException)
             {

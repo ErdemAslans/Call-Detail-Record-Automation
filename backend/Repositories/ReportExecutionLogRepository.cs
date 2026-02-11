@@ -91,18 +91,19 @@ public class ReportExecutionLogRepository : IReportExecutionLogRepository
     }
 
     public async Task UpdateStatusAsync(
-        Guid id, 
-        string status, 
+        Guid id,
+        string status,
         long? generationDurationMs = null,
         int? recordsProcessed = null,
         long? fileSizeBytes = null,
-        string? errorMessage = null)
+        string? errorMessage = null,
+        string? generatedFileName = null)
     {
         var log = await _context.ReportExecutionLogs.FindAsync(id);
         if (log == null) return;
 
         log.ExecutionStatus = status;
-        
+
         if (status == "Completed" || status == "Failed")
         {
             log.CompletedAt = DateTime.UtcNow;
@@ -126,6 +127,11 @@ public class ReportExecutionLogRepository : IReportExecutionLogRepository
         if (!string.IsNullOrEmpty(errorMessage))
         {
             log.ErrorMessage = errorMessage;
+        }
+
+        if (!string.IsNullOrEmpty(generatedFileName))
+        {
+            log.GeneratedFileName = generatedFileName;
         }
 
         await _context.SaveChangesAsync();

@@ -414,12 +414,13 @@ public class ReportController : ControllerBase
             }
 
             // Enqueue email sending job via Hangfire for async processing
-            var jobId = BackgroundJob.Enqueue<ICdrReportJobService>(x => 
+            var jobId = BackgroundJob.Enqueue<ICdrReportJobService>(x =>
                 x.SendOnDemandReportAsync(
                     executionLog.PeriodStartDate,
                     executionLog.PeriodEndDate,
                     executionLog.ReportType,
-                    request.EmailRecipients));
+                    request.EmailRecipients,
+                    executionLog.Id));
 
             var response = new EmailDeliveryAggregateResponse
             {

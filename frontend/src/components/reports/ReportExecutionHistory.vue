@@ -51,7 +51,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="execution in executionHistory" :key="execution.id">
+            <tr v-for="execution in executionHistory" :key="execution.executionId">
               <!-- Report Type -->
               <td class="ps-4">
                 <span class="badge" :class="getReportTypeBadge(execution.reportType)">
@@ -93,14 +93,14 @@
 
               <!-- Email Status -->
               <td>
-                <div v-if="execution.totalEmailRecipients > 0">
+                <div v-if="execution.recipientsCount > 0">
                   <span class="text-success fw-semibold">
-                    {{ execution.successfulEmailDeliveries }}
+                    {{ execution.successfulDeliveries }}
                   </span>
                   <span class="text-muted">/</span>
-                  <span class="text-dark">{{ execution.totalEmailRecipients }}</span>
-                  <span v-if="execution.failedEmailDeliveries > 0" class="text-danger ms-1">
-                    ({{ execution.failedEmailDeliveries }} {{ translate("failed") }})
+                  <span class="text-dark">{{ execution.recipientsCount }}</span>
+                  <span v-if="execution.failedDeliveries > 0" class="text-danger ms-1">
+                    ({{ execution.failedDeliveries }} {{ translate("failed") }})
                   </span>
                 </div>
                 <span v-else class="text-muted">-</span>
@@ -123,7 +123,7 @@
                   type="button"
                   class="btn btn-icon btn-light-primary btn-sm me-1"
                   :title="translate('downloadReport')"
-                  @click="handleDownload(execution.id)"
+                  @click="handleDownload(execution.executionId)"
                 >
                   <KTIcon icon-name="file-down" icon-class="fs-4" />
                 </button>

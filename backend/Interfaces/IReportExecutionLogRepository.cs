@@ -56,12 +56,13 @@ public interface IReportExecutionLogRepository
     /// Update execution status and optionally set completion details.
     /// </summary>
     Task UpdateStatusAsync(
-        Guid id, 
-        string status, 
+        Guid id,
+        string status,
         long? generationDurationMs = null,
         int? recordsProcessed = null,
         long? fileSizeBytes = null,
-        string? errorMessage = null);
+        string? errorMessage = null,
+        string? generatedFileName = null);
 
     /// <summary>
     /// Get execution statistics for monitoring dashboard.

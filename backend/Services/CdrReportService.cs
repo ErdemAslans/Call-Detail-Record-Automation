@@ -171,7 +171,8 @@ public class CdrReportService : ICdrReportService
                 "Completed",
                 result.GenerationDurationMs,
                 result.RecordsProcessed,
-                result.FileSizeBytes);
+                result.FileSizeBytes,
+                generatedFileName: result.FileName);
 
             _logger.LogInformation(
                 "Successfully generated {ReportType} report. Records: {Records}, Size: {Size} bytes, Duration: {Duration}ms",
@@ -414,7 +415,8 @@ public class CdrReportService : ICdrReportService
                 "Completed",
                 result.GenerationDurationMs,
                 result.RecordsProcessed,
-                result.FileSizeBytes);
+                result.FileSizeBytes,
+                generatedFileName: result.FileName);
 
             _logger.LogInformation(
                 "Successfully generated {ReportType} operator report for {OperatorNumber}. Records: {Records}, Size: {Size} bytes, Duration: {Duration}ms",

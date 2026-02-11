@@ -89,7 +89,7 @@ export interface SendEmailReportResponse {
  * Report execution history item
  */
 export interface ReportExecutionHistory {
-  id: string;
+  executionId: string;
   reportType: string;
   triggerType: string;
   periodStartDate: string;
@@ -97,12 +97,10 @@ export interface ReportExecutionHistory {
   executionStatus: string;
   startedAt: string;
   completedAt: string | null;
-  recordsProcessed: number | null;
-  fileSizeBytes: number | null;
-  totalEmailRecipients: number;
-  successfulEmailDeliveries: number;
-  failedEmailDeliveries: number;
-  errorMessage: string | null;
+  recordsProcessed: number;
+  recipientsCount: number;
+  successfulDeliveries: number;
+  failedDeliveries: number;
 }
 
 /**
@@ -173,6 +171,7 @@ export const useEmailReportStore = defineStore("emailReport", () => {
   function clearReport() {
     currentReport.value = null;
     deliveryStatus.value = null;
+    stopPolling();
     clearError();
   }
 
@@ -229,18 +228,15 @@ export const useEmailReportStore = defineStore("emailReport", () => {
         reportExecutionId: currentReport.value.reportId,
         emailRecipients: recipients,
       };
-      
+
       const { data } = await ApiService.post(apiUrlConstants.SEND_EMAIL_REPORT, request);
       deliveryStatus.value = data;
-      
-      if (data.failedDeliveries === 0) {
-        ResponseMessageService.showMessageByType("emailReport_sent", "success");
-      } else if (data.successfulDeliveries > 0) {
-        ResponseMessageService.showMessageByType("emailReport_partialSent", "warning");
-      } else {
-        ResponseMessageService.showMessageByType("emailReport_sendFailed", "error");
-      }
-      
+
+      ResponseMessageService.showMessageByType("emailReport_sent", "success");
+
+      // Start polling for delivery results (Hangfire processes async)
+      pollDeliveryStatus(currentReport.value.reportId);
+
       return data;
     } catch (error: any) {
       const errorMessage = error.response?.data?.error?.message || "E-posta gönderilirken hata oluştu";
@@ -249,6 +245,57 @@ export const useEmailReportStore = defineStore("emailReport", () => {
     } finally {
       isSending.value = false;
     }
+  }
+
+  /**
+   * Poll execution history to get updated email delivery status
+   */
+  let pollTimer: ReturnType<typeof setTimeout> | null = null;
+  let pollAttempts = 0;
+  const MAX_POLL_ATTEMPTS = 12; // 12 * 10s = 2 minutes max polling
+  const POLL_INTERVAL_MS = 10000; // 10 seconds
+
+  function pollDeliveryStatus(reportId: string) {
+    pollAttempts = 0;
+    if (pollTimer) clearTimeout(pollTimer);
+    schedulePoll(reportId);
+  }
+
+  function schedulePoll(reportId: string) {
+    pollTimer = setTimeout(async () => {
+      pollAttempts++;
+      try {
+        await fetchExecutionHistory();
+        // Check if the original execution now has email delivery data
+        const execution = executionHistory.value.find(
+          (e) => e.executionId === reportId
+        );
+        if (execution && (execution.successfulDeliveries > 0 || execution.failedDeliveries > 0)) {
+          // Update delivery status display with real results
+          if (deliveryStatus.value) {
+            deliveryStatus.value.successfulDeliveries = execution.successfulDeliveries;
+            deliveryStatus.value.failedDeliveries = execution.failedDeliveries;
+            deliveryStatus.value.totalRecipients = execution.recipientsCount;
+            deliveryStatus.value.overallStatus = execution.failedDeliveries === 0 ? "Completed" : "PartialFailure";
+          }
+          return; // Stop polling
+        }
+      } catch {
+        // Ignore poll errors
+      }
+
+      if (pollAttempts < MAX_POLL_ATTEMPTS) {
+        schedulePoll(reportId);
+      }
+    }, POLL_INTERVAL_MS);
+  }
+
+  function stopPolling() {
+    if (pollTimer) {
+      clearTimeout(pollTimer);
+      pollTimer = null;
+    }
+    pollAttempts = 0;
   }
 
   /**
