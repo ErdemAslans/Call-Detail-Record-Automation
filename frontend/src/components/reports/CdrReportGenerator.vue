@@ -303,20 +303,20 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="status in deliveryStatus.recipientStatuses" :key="status.recipientEmail">
-                <td>{{ status.recipientEmail }}</td>
+              <tr v-for="item in deliveryStatus.recipientStatuses" :key="item.recipientEmail">
+                <td>{{ item.recipientEmail }}</td>
                 <td>
                   <span
                     class="badge"
-                    :class="getStatusBadgeClass(status.deliveryStatus)"
+                    :class="getStatusBadgeClass(item.status)"
                   >
-                    {{ translate(`status_${status.deliveryStatus}`) }}
+                    {{ translate(`status_${item.status}`) }}
                   </span>
                 </td>
-                <td>{{ status.attemptCount }}</td>
+                <td>{{ item.attemptCount }}</td>
                 <td>
-                  <span v-if="status.lastAttemptAt">
-                    {{ formatDateTime(status.lastAttemptAt) }}
+                  <span v-if="item.deliveredAt">
+                    {{ formatDateTime(item.deliveredAt) }}
                   </span>
                   <span v-else class="text-muted">-</span>
                 </td>

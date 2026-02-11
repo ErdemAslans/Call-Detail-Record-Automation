@@ -67,9 +67,9 @@ export interface CdrEmailReportResponse {
  */
 export interface EmailDeliveryStatus {
   recipientEmail: string;
-  deliveryStatus: "Pending" | "Sent" | "Failed" | "Retrying";
+  status: "Pending" | "Sent" | "Failed" | "Retrying";
   attemptCount: number;
-  lastAttemptAt: string | null;
+  deliveredAt: string | null;
   errorMessage: string | null;
 }
 
