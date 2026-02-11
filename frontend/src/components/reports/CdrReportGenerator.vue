@@ -94,26 +94,12 @@
           </el-collapse>
         </div>
 
-        <!-- Email Recipients -->
+        <!-- Email info -->
         <div class="mt-8">
-          <h4 class="fs-5 fw-semibold mb-3">{{ translate("emailRecipients") }}</h4>
-          <el-select
-            v-model="selectedRecipients"
-            multiple
-            filterable
-            allow-create
-            default-first-option
-            :placeholder="translate('selectOrEnterEmails')"
-            class="w-100"
-          >
-            <el-option
-              v-for="admin in adminRecipients"
-              :key="admin"
-              :label="admin"
-              :value="admin"
-            />
-          </el-select>
-          <p class="text-muted fs-7 mt-2">{{ translate("recipientsHelp") }}</p>
+          <p class="text-muted fs-7">
+            <KTIcon icon-name="sms" icon-class="fs-5 me-1" />
+            {{ translate("emailAutoSendInfo") }}
+          </p>
         </div>
 
         <!-- Generate & Send Button -->
@@ -358,17 +344,6 @@ const {
 const selectedReportType = ref<ReportType>("weekly");
 const customStartDate = ref<string | null>(null);
 const customEndDate = ref<string | null>(null);
-const selectedRecipients = ref<string[]>([]);
-
-// Default admin recipients (matching appsettings.json DefaultRecipients)
-const adminRecipients = ref<string[]>([
-  "vguler@dogusoto.com.tr",
-  "mturun@dogusoto.com.tr",
-  "mkanberoglu@dogusoto.com.tr",
-]);
-
-// Initialize selected recipients with admin list
-selectedRecipients.value = [...adminRecipients.value];
 
 // Date picker disabled date functions
 const disabledStartDate = (date: Date) => {
@@ -443,7 +418,6 @@ const handleGenerateReport = async () => {
     startDate: customStartDate.value || undefined,
     endDate: customEndDate.value || undefined,
     sendEmail: true,
-    emailRecipients: selectedRecipients.value,
   };
   await emailReportStore.generateReport(request);
 };
@@ -458,7 +432,6 @@ const clearReport = () => {
   emailReportStore.clearReport();
   customStartDate.value = null;
   customEndDate.value = null;
-  selectedRecipients.value = [...adminRecipients.value];
 };
 </script>
 
