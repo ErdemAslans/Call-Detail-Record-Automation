@@ -111,7 +111,7 @@ export const useDashboardStore = defineStore("dashboard", () => {
     const queryString = `startDate=${encodeURIComponent(params.startDate)}&endDate=${encodeURIComponent(params.endDate)}`;
     const url = `${apiUrlConstants.DEPARTMENT_STATISTICS_EXCEL}?${queryString}`;
 
-    return ApiService.get(url, { responseType: "blob" })
+    return ApiService.query(url, { responseType: "blob" })
       .then(({ data }) => {
         const blob = new Blob([data], {
           type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

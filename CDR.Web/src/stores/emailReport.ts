@@ -108,6 +108,7 @@ export interface GenerateReportRequest {
   reportType: ReportType;
   startDate?: string;
   endDate?: string;
+  sendEmail?: boolean;
 }
 
 /**
@@ -277,7 +278,7 @@ export const useEmailReportStore = defineStore("emailReport", () => {
   async function downloadReport(executionId: string): Promise<void> {
     try {
       const url = `${apiUrlConstants.DOWNLOAD_REPORT}/${executionId}`;
-      const response = await ApiService.get(url);
+      const response = await ApiService.query(url, { responseType: "blob" });
       
       // Create blob and trigger download
       const blob = new Blob([response.data], {

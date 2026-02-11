@@ -222,36 +222,33 @@ export default defineComponent({
     const plannedEndTimeLocal = ref("");
     const plannedEndTimeError = ref("");
     const breakModal = ref<Modal | null>(null);
-    const formatDate = (date: Date): string => date.toISOString().split("T")[0];
+    const formatDate = (date: Date): string =>
+      date.toLocaleDateString("en-CA", { timeZone: "Europe/Istanbul" });
     type DateRange = "today" | "week" | "month" | "year";
 
     const getDateRange = (range: DateRange): { start: string; end: string } => {
-      const today = new Date();
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = now.getMonth();
+      const d = now.getDate();
 
       const ranges: Record<DateRange, { start: Date; end: Date }> = {
         today: {
-          start: new Date(today.setHours(0, 0, 0, 0)),
-          end: new Date(today.setHours(23, 59, 59, 999)),
+          start: new Date(y, m, d),
+          end: new Date(y, m, d),
         },
         week: {
-          start: new Date(
-            today.getFullYear(),
-            today.getMonth(),
-            today.getDate() - today.getDay(),
-          ),
-          end: new Date(
-            today.getFullYear(),
-            today.getMonth(),
-            today.getDate() - today.getDay() + 6,
-          ),
+          // Pazartesi başlangıçlı hafta (getDay: 0=Pazar, 1=Pazartesi...)
+          start: new Date(y, m, d - ((now.getDay() + 6) % 7)),
+          end: new Date(y, m, d - ((now.getDay() + 6) % 7) + 6),
         },
         month: {
-          start: new Date(today.getFullYear(), today.getMonth(), 1),
-          end: new Date(today.getFullYear(), today.getMonth() + 1, 0),
+          start: new Date(y, m, 1),
+          end: new Date(y, m + 1, 0),
         },
         year: {
-          start: new Date(today.getFullYear(), 0, 1),
-          end: new Date(today.getFullYear(), 11, 31),
+          start: new Date(y, 0, 1),
+          end: new Date(y, 11, 31),
         },
       };
 
@@ -261,12 +258,7 @@ export default defineComponent({
       };
     };
 
-    //TODO: Uncomment this code when the API is ready
-    // const { start, end } = getDateRange("today");
-    // const startDate = ref(start);
-    // const endDate = ref(end);
-
-    const { start, end } = getDateRange("week");
+    const { start, end } = getDateRange("today");
     const startDate = ref(start);
     const endDate = ref(end);
 

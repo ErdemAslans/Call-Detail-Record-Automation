@@ -461,6 +461,7 @@ const handleGenerateReport = async () => {
     reportType: selectedReportType.value,
     startDate: customStartDate.value || undefined,
     endDate: customEndDate.value || undefined,
+    sendEmail: false,
   };
   await emailReportStore.generateReport(request);
 };
