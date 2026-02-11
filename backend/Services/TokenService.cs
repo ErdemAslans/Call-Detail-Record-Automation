@@ -37,7 +37,7 @@ public class TokenService : ITokenService
         var userId = principal.FindFirstValue(JwtRegisteredClaimNames.Sub);
 
         var user = await _userManager.FindByIdAsync(userId);
-        if (user == null || user.RefreshToken != refreshToken || user.RefreshTokenExpiryTime <= DateTime.Now)
+        if (user == null || user.RefreshToken != refreshToken || user.RefreshTokenExpiryTime <= DateTime.UtcNow)
         {
             throw new SecurityTokenException("Invalid refresh token");
         }

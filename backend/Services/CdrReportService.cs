@@ -271,58 +271,72 @@ public class CdrReportService : ICdrReportService
         try
         {
             var (startUtc, endUtc) = TurkeyTimeProvider.ConvertDateRangeToUtc(startDate, endDate);
-            var breaks = await _breakRepository.GetAllBreaksByDateRangeAsync(startUtc, endUtc);
+            var allBreaks = await _breakRepository.GetAllBreaksByDateRangeAsync(startUtc, endUtc);
 
-            if (breaks.Count == 0) return;
+            if (allBreaks.Count == 0) return;
 
             // Map userId -> (Name, PhoneNumber) using Operator collection
-            var userIds = breaks.Select(b => b.UserId).Distinct().ToList();
             var allOperators = await _operatorRepository.GetAllAsync();
             var operatorMap = allOperators.ToDictionary(o => o.Id, o => o);
 
-            // Group breaks by userId
-            var grouped = breaks.GroupBy(b => b.UserId);
-            foreach (var group in grouped)
-            {
-                var userId = group.Key;
-                operatorMap.TryGetValue(userId, out var op);
+            // Separate actual breaks from end-of-shift records
+            var breaks = allBreaks.Where(b => b.BreakType != "EndOfShift").ToList();
+            var shiftEnds = allBreaks.Where(b => b.BreakType == "EndOfShift").ToList();
 
-                var operatorSummary = new OperatorBreakSummary
-                {
-                    OperatorName = op?.Name ?? "Bilinmeyen",
-                    PhoneNumber = op?.PhoneNumber ?? "",
-                    BreakCount = group.Count()
-                };
-
-                double totalMinutes = 0;
-                foreach (var b in group.OrderBy(x => x.StartTime))
-                {
-                    var effectiveEnd = b.EndTime ?? b.PlannedEndTime;
-                    var duration = (effectiveEnd - b.StartTime).TotalMinutes;
-                    if (duration < 0) duration = 0;
-
-                    totalMinutes += duration;
-                    operatorSummary.Breaks.Add(new BreakDetail
-                    {
-                        StartTime = TurkeyTimeProvider.ConvertFromUtc(b.StartTime),
-                        EndTime = b.EndTime.HasValue ? TurkeyTimeProvider.ConvertFromUtc(b.EndTime.Value) : null,
-                        DurationMinutes = Math.Round(duration, 1),
-                        Reason = b.Reason
-                    });
-                }
-
-                operatorSummary.TotalDurationMinutes = Math.Round(totalMinutes, 1);
-                summary.BreakSummaries.Add(operatorSummary);
-            }
-
-            // Sort by break count descending
+            // Process actual breaks
+            PopulateBreakGroup(summary.BreakSummaries, breaks, operatorMap);
             summary.BreakSummaries = summary.BreakSummaries.OrderByDescending(x => x.BreakCount).ToList();
             summary.TotalBreakCount = summary.BreakSummaries.Sum(x => x.BreakCount);
             summary.TotalBreakDurationMinutes = Math.Round(summary.BreakSummaries.Sum(x => x.TotalDurationMinutes), 1);
+
+            // Process end-of-shift records
+            PopulateBreakGroup(summary.ShiftEndSummaries, shiftEnds, operatorMap);
+            summary.ShiftEndSummaries = summary.ShiftEndSummaries.OrderByDescending(x => x.BreakCount).ToList();
+            summary.TotalShiftEndCount = summary.ShiftEndSummaries.Sum(x => x.BreakCount);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to populate break summaries for report. Continuing without break data.");
+        }
+    }
+
+    private void PopulateBreakGroup(
+        List<OperatorBreakSummary> targetList,
+        List<Models.Entities.Break> items,
+        Dictionary<string, Models.Entities.Operator> operatorMap)
+    {
+        var grouped = items.GroupBy(b => b.UserId);
+        foreach (var group in grouped)
+        {
+            operatorMap.TryGetValue(group.Key, out var op);
+
+            var operatorSummary = new OperatorBreakSummary
+            {
+                OperatorName = op?.Name ?? "Bilinmeyen",
+                PhoneNumber = op?.PhoneNumber ?? "",
+                BreakCount = group.Count()
+            };
+
+            double totalMinutes = 0;
+            foreach (var b in group.OrderBy(x => x.StartTime))
+            {
+                var effectiveEnd = b.EndTime ?? b.PlannedEndTime;
+                var duration = (effectiveEnd - b.StartTime).TotalMinutes;
+                if (duration < 0) duration = 0;
+
+                totalMinutes += duration;
+                operatorSummary.Breaks.Add(new BreakDetail
+                {
+                    StartTime = TurkeyTimeProvider.ConvertFromUtc(b.StartTime),
+                    EndTime = b.EndTime.HasValue ? TurkeyTimeProvider.ConvertFromUtc(b.EndTime.Value) : null,
+                    DurationMinutes = Math.Round(duration, 1),
+                    Reason = b.Reason,
+                    BreakType = b.BreakType
+                });
+            }
+
+            operatorSummary.TotalDurationMinutes = Math.Round(totalMinutes, 1);
+            targetList.Add(operatorSummary);
         }
     }
 

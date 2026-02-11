@@ -137,6 +137,29 @@ public class OperatorController : ControllerBase
         }
     }
 
+    [HttpPost("end-shift")]
+    [Authorize(Roles = "Central")]
+    public async Task<IActionResult> EndShift([FromBody] EndShiftRequest? request)
+    {
+        try
+        {
+            var username = User.FindFirst(ClaimTypes.Name)?.Value;
+            var (success, breakInfo, message) = await _operatorService.EndShiftAsync(username, request?.Reason);
+
+            if (!success)
+            {
+                return BadRequest(message);
+            }
+
+            return Ok(new { breakInfo, message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while ending shift");
+            return StatusCode(500);
+        }
+    }
+
     [HttpPost("admin-force-end-break/{userId}")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> AdminForceEndBreak(string userId)

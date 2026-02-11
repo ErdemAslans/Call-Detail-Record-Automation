@@ -62,4 +62,9 @@ public interface IOperatorService
     /// Force-ends any ongoing break for a given user (Admin only)
     /// </summary>
     Task<(bool Success, BreakResponseModel? BreakInfo, string? Message)> ForceEndBreakAsync(string userId);
+
+    /// <summary>
+    /// Registers end of shift for an operator. PlannedEndTime = next work day 07:45 Turkey time.
+    /// </summary>
+    Task<(bool Success, BreakResponseModel? BreakInfo, string? Message)> EndShiftAsync(string username, string? reason);
 }

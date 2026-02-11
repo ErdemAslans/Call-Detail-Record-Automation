@@ -112,5 +112,38 @@ namespace Cdr.Api.Services
             var breakResponse = _mapper.Map<BreakResponseModel>(updatedBreak);
             return (true, breakResponse, "Break force-ended successfully.");
         }
+
+        public async Task<(bool Success, BreakResponseModel? BreakInfo, string? Message)> EndShiftAsync(string username, string? reason)
+        {
+            var user = await _operatorRepository.GetUserByUsernameAsync(username);
+            if (await _breakRepository.HasOngoingBreakAsync(user.Id))
+            {
+                return (false, null, "User already has an ongoing break or shift-end record.");
+            }
+
+            // PlannedEndTime = next work day 07:45 Turkey time → UTC
+            var turkeyTz = TimeZoneInfo.FindSystemTimeZoneById("Turkey Standard Time");
+            var nowTurkey = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, turkeyTz);
+            var nextWorkDay = nowTurkey.Date.AddDays(1);
+            // Skip weekends
+            while (nextWorkDay.DayOfWeek == DayOfWeek.Saturday || nextWorkDay.DayOfWeek == DayOfWeek.Sunday)
+            {
+                nextWorkDay = nextWorkDay.AddDays(1);
+            }
+            var plannedEndTurkey = nextWorkDay.Add(new TimeSpan(7, 45, 0));
+            var plannedEndUtc = TimeZoneInfo.ConvertTimeToUtc(plannedEndTurkey, turkeyTz);
+
+            var breakInfo = new Break
+            {
+                UserId = user.Id,
+                StartTime = DateTime.UtcNow,
+                PlannedEndTime = plannedEndUtc,
+                Reason = reason ?? "Mesai bitimi",
+                BreakType = "EndOfShift"
+            };
+            await _breakRepository.StartBreakAsync(breakInfo);
+            var breakResponse = _mapper.Map<BreakResponseModel>(breakInfo);
+            return (true, breakResponse, "Shift ended successfully.");
+        }
     }
 }

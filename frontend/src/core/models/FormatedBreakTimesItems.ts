@@ -4,4 +4,5 @@ interface FormatedBreakTimesItems {
   type: string;
   reason?: string;
   isEnd?: boolean;
+  breakType?: string; // "Break" or "EndOfShift"
 }

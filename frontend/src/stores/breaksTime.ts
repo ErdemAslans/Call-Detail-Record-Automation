@@ -69,6 +69,17 @@ export const useBreaksStore = defineStore("breaks", () => {
       });
   }
 
+  function endShift(reason?: string): Promise<any> {
+    const url = `${apiUrlConstants.END_SHIFT}`;
+    return ApiService.post(url, { reason })
+      .then(() => {
+        ResponseMessageService.showMessageByType("shifts_endShift", "success");
+      })
+      .catch(({ response }) => {
+        throw response;
+      });
+  }
+
   function formatBreakTimes(
     breakTimes: BreakListItem[],
   ): FormatedBreakTimesItems[] {
@@ -105,9 +116,10 @@ export const useBreaksStore = defineStore("breaks", () => {
           breaksByDate.get(breakStartDate)!.push({
             id: item.id,
             breakTime: item.startTime,
-            type: "breakStart",
+            type: item.breakType === "EndOfShift" ? "shiftEnd" : "breakStart",
             reason: item.reason,
             isEnd: item.endTime ? true : false,
+            breakType: item.breakType,
           });
         }
       }
@@ -166,5 +178,6 @@ export const useBreaksStore = defineStore("breaks", () => {
     fetchOngoingBreak,
     startNewBreak,
     endBreak,
+    endShift,
   };
 });

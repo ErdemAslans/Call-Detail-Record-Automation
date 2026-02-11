@@ -216,6 +216,45 @@
           </div>
         </div>
 
+        <!-- Shift End Summary Section -->
+        <div v-if="shiftEndSummaries.length > 0" class="mb-8">
+          <div class="d-flex align-items-center mb-5">
+            <span class="fs-4 me-2">🏢</span>
+            <h5 class="fs-5 fw-bold mb-0">{{ translate("shiftEndSummary") }}</h5>
+            <span class="badge badge-light-warning ms-3">
+              {{ totalShiftEndCount }} {{ translate("shiftEndCount") }}
+            </span>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-row-bordered table-row-gray-200 align-middle gs-0 gy-3">
+              <thead>
+                <tr class="fw-bold text-muted bg-light">
+                  <th class="ps-4 rounded-start">{{ translate("operatorName") }}</th>
+                  <th>{{ translate("phone") }}</th>
+                  <th class="rounded-end">{{ translate("shiftEndTime") }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="op in shiftEndSummaries" :key="op.operatorName">
+                  <td class="ps-4">
+                    <span class="fw-semibold text-dark">{{ op.operatorName }}</span>
+                  </td>
+                  <td>
+                    <span class="text-muted fs-7">{{ op.phoneNumber || "-" }}</span>
+                  </td>
+                  <td>
+                    <div v-for="(b, i) in op.breaks" :key="i" class="fs-8 text-muted">
+                      {{ formatTime(b.startTime) }}
+                      <span v-if="b.reason" class="badge badge-light-warning ms-1 fs-9">{{ b.reason }}</span>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <!-- Download Button -->
         <div class="d-flex justify-content-center gap-3 mb-8">
           <button
@@ -397,6 +436,15 @@ const totalBreakCount = computed(() => {
 
 const totalBreakDurationMinutes = computed(() => {
   return currentReport.value?.metricsSummary?.totalBreakDurationMinutes ?? 0;
+});
+
+// Shift end summary computed
+const shiftEndSummaries = computed<OperatorBreakSummary[]>(() => {
+  return currentReport.value?.metricsSummary?.shiftEndSummaries ?? [];
+});
+
+const totalShiftEndCount = computed(() => {
+  return currentReport.value?.metricsSummary?.totalShiftEndCount ?? 0;
 });
 
 const formatMinutes = (totalMinutes: number): string => {

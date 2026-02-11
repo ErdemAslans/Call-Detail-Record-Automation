@@ -15,20 +15,28 @@
             <li class="nav-item" role="presentation">
               <button
                 v-if="ongoingBreaks"
-                class="btn btn-sm btn-success align-self-center"
+                class="btn btn-sm btn-success align-self-center me-2"
                 @click="endCurrentBreak"
               >
                 <KTIcon icon-name="timer" icon-class="fs-3 text-white me-2" />
                 {{ $t("breaks_end") }}
               </button>
-              <button
-                v-else
-                class="btn btn-sm btn-danger align-self-center"
-                @click="startNewBreak"
-              >
-                <KTIcon icon-name="watch" icon-class="fs-3 text-white me-2" />
-                {{ $t("breaks_newBreak") }}
-              </button>
+              <template v-else>
+                <button
+                  class="btn btn-sm btn-danger align-self-center me-2"
+                  @click="startNewBreak"
+                >
+                  <KTIcon icon-name="watch" icon-class="fs-3 text-white me-2" />
+                  {{ $t("breaks_newBreak") }}
+                </button>
+                <button
+                  class="btn btn-sm btn-warning align-self-center"
+                  @click="handleEndShift"
+                >
+                  <KTIcon icon-name="exit-right" icon-class="fs-3 text-white me-2" />
+                  {{ $t("endShift") }}
+                </button>
+              </template>
             </li>
             <li class="nav-item" role="presentation">
               <a
@@ -355,12 +363,27 @@ export default defineComponent({
       const breakId =
         ongoingBreakId.value ||
         breaks.value.find(
-          (breakItem) => !breakItem.isEnd && breakItem.type === "breakStart",
+          (breakItem) => !breakItem.isEnd && (breakItem.type === "breakStart" || breakItem.type === "shiftEnd"),
         )?.id;
       if (!breakId) return;
 
       await breaksTimeStore.endBreak(breakId);
       await fetchBreaksAndUpdateStatus();
+    };
+
+    const handleEndShift = async () => {
+      try {
+        await breaksTimeStore.endShift();
+        await fetchBreaksAndUpdateStatus();
+      } catch (error: any) {
+        if (error?.status === 400) {
+          ElMessage.error(
+            i18n.global.t("breaks_ongoingBreakError") ||
+              "Zaten açık bir molanız var. Lütfen önce mevcut molayı kapatın.",
+          );
+          await checkOngoingBreak();
+        }
+      }
     };
 
     const setDateRange = (range: DateRange) => {
@@ -380,6 +403,7 @@ export default defineComponent({
       ongoingBreaks,
       startNewBreak,
       endCurrentBreak,
+      handleEndShift,
       setDateRange,
       fetchBreaksAndUpdateStatus,
       breakReason,

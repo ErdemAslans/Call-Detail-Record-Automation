@@ -4,4 +4,5 @@ interface BreakListItem {
   startTime: string;
   endTime: string | null;
   reason: string;
+  breakType?: string; // "Break" or "EndOfShift"
 }

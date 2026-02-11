@@ -18,12 +18,8 @@
     <div class="timeline-icon symbol symbol-circle symbol-40px">
       <div class="symbol-label bg-light">
         <KTIcon
-          :icon-name="breakItem.type === 'breakStart' ? 'timer' : 'watch'"
-          :icon-class="
-            breakItem.type === 'breakStart'
-              ? 'fs-2 text-danger'
-              : 'fs-2 text-success'
-          "
+          :icon-name="itemIcon"
+          :icon-class="'fs-2 ' + itemColorClass"
         />
       </div>
     </div>
@@ -34,27 +30,15 @@
       <!--begin::Timeline heading-->
       <div class="pe-3 mb-5">
         <!--begin::Title-->
-        <div
-          :class="
-            breakItem.type === 'breakStart'
-              ? 'fs-5 fw-semibold mb-2 text-danger'
-              : 'fs-5 fw-semibold mb-2 text-success'
-          "
-        >
-          {{ $t(breakItem.type) }}
+        <div :class="'fs-5 fw-semibold mb-2 ' + itemColorClass">
+          {{ $t(itemLabel) }}
         </div>
         <!--end::Title-->
 
         <!--begin::Description-->
         <div class="d-flex align-items-center mt-1 fs-6">
           <!--begin::Info-->
-          <div
-            :class="
-              breakItem.type === 'breakStart'
-                ? 'text-danger me-2 fs-7'
-                : 'text-success me-2 fs-7'
-            "
-          >
+          <div :class="itemColorClass + ' me-2 fs-7'">
             {{
               DateHelper.toLocaleTimeStringWithCulture(
                 new Date(breakItem.breakTime),
@@ -70,7 +54,9 @@
       <!--begin::Timeline details-->
       <div v-if="breakItem.type !== 'breakEnd'" class="overflow-auto pb-5">
         <div
-          class="notice d-flex bg-light-primary rounded border-primary border border-dashed min-w-lg-600px flex-shrink-0 p-6"
+          :class="breakItem.type === 'shiftEnd'
+            ? 'notice d-flex bg-light-warning rounded border-warning border border-dashed min-w-lg-600px flex-shrink-0 p-6'
+            : 'notice d-flex bg-light-primary rounded border-primary border border-dashed min-w-lg-600px flex-shrink-0 p-6'"
         >
           <!--begin::Icon-->
           <KTIcon icon-name="notepad" icon-class="fs-2tx text-primary me-4" />
@@ -134,11 +120,31 @@ export default defineComponent({
       return new Date(props.breakItem.breakTime).toLocaleTimeString();
     });
 
+    const itemIcon = computed(() => {
+      if (props.breakItem.type === "shiftEnd") return "exit-right";
+      if (props.breakItem.type === "breakStart") return "timer";
+      return "watch";
+    });
+
+    const itemColorClass = computed(() => {
+      if (props.breakItem.type === "shiftEnd") return "text-warning";
+      if (props.breakItem.type === "breakStart") return "text-danger";
+      return "text-success";
+    });
+
+    const itemLabel = computed(() => {
+      if (props.breakItem.type === "shiftEnd") return "shiftEnd";
+      return props.breakItem.type;
+    });
+
     return {
       getAssetPath,
       formattedTime,
       DateHelper,
       handleEndBreak,
+      itemIcon,
+      itemColorClass,
+      itemLabel,
     };
   },
 });

@@ -14,8 +14,10 @@ public class CdrReportMetricsSummary
     public int WorkHoursCalls { get; set; }
     public int AfterHoursCalls { get; set; }
     public List<OperatorBreakSummary> BreakSummaries { get; set; } = new();
+    public List<OperatorBreakSummary> ShiftEndSummaries { get; set; } = new();
     public int TotalBreakCount { get; set; }
     public double TotalBreakDurationMinutes { get; set; }
+    public int TotalShiftEndCount { get; set; }
 }
 
 /// <summary>
@@ -39,4 +41,5 @@ public class BreakDetail
     public DateTime? EndTime { get; set; }
     public double DurationMinutes { get; set; }
     public string? Reason { get; set; }
+    public string BreakType { get; set; } = "Break";
 }

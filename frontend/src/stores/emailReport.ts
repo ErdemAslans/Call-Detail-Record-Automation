@@ -37,8 +37,10 @@ export interface CdrReportMetricsSummary {
   workHoursCalls: number;
   afterHoursCalls: number;
   breakSummaries: OperatorBreakSummary[];
+  shiftEndSummaries: OperatorBreakSummary[];
   totalBreakCount: number;
   totalBreakDurationMinutes: number;
+  totalShiftEndCount: number;
 }
 
 /**

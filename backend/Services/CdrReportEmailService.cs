@@ -378,39 +378,23 @@ public class CdrReportEmailService : ICdrReportEmailService
             
             sb.AppendLine("</table>");
 
-            // Break summary section
+            // Break summary section (actual breaks only)
             if (report.MetricsSummary.BreakSummaries.Count > 0)
             {
                 sb.AppendLine("<h3 style=\"color: #1a5f7a;\">☕ Mola Özeti</h3>");
                 sb.AppendLine($"<p><strong>Toplam Mola Sayısı:</strong> {report.MetricsSummary.TotalBreakCount} &nbsp; | &nbsp; ");
                 sb.AppendLine($"<strong>Toplam Mola Süresi:</strong> {FormatMinutes(report.MetricsSummary.TotalBreakDurationMinutes)}</p>");
 
-                sb.AppendLine("<table style=\"width: 100%; border-collapse: collapse; margin-bottom: 20px;\">");
-                sb.AppendLine("<tr style=\"background-color: #1a5f7a; color: white;\">");
-                sb.AppendLine("<th style=\"padding: 8px; text-align: left;\">Operatör</th>");
-                sb.AppendLine("<th style=\"padding: 8px; text-align: center;\">Mola Sayısı</th>");
-                sb.AppendLine("<th style=\"padding: 8px; text-align: center;\">Toplam Süre</th>");
-                sb.AppendLine("<th style=\"padding: 8px; text-align: left;\">Mola Saatleri</th>");
-                sb.AppendLine("</tr>");
+                AppendBreakTable(sb, report.MetricsSummary.BreakSummaries, "#1a5f7a", "Mola Sayısı", "Mola Saatleri", trCulture);
+            }
 
-                foreach (var opBreak in report.MetricsSummary.BreakSummaries)
-                {
-                    var breakTimes = string.Join("<br>", opBreak.Breaks.Select(b =>
-                    {
-                        var start = b.StartTime.ToString("HH:mm", trCulture);
-                        var end = b.EndTime?.ToString("HH:mm", trCulture) ?? "Devam";
-                        return $"{start} - {end} ({b.DurationMinutes:F0} dk)";
-                    }));
+            // End-of-shift summary section
+            if (report.MetricsSummary.ShiftEndSummaries.Count > 0)
+            {
+                sb.AppendLine("<h3 style=\"color: #d97706;\">🏢 Mesai Bitimi</h3>");
+                sb.AppendLine($"<p><strong>Toplam Mesai Bitimi Kaydı:</strong> {report.MetricsSummary.TotalShiftEndCount}</p>");
 
-                    sb.AppendLine("<tr>");
-                    sb.AppendLine($"<td style=\"padding: 8px; border-bottom: 1px solid #ddd;\">{opBreak.OperatorName}<br><small style=\"color: #666;\">{opBreak.PhoneNumber}</small></td>");
-                    sb.AppendLine($"<td style=\"padding: 8px; border-bottom: 1px solid #ddd; text-align: center; font-weight: bold;\">{opBreak.BreakCount}</td>");
-                    sb.AppendLine($"<td style=\"padding: 8px; border-bottom: 1px solid #ddd; text-align: center;\">{FormatMinutes(opBreak.TotalDurationMinutes)}</td>");
-                    sb.AppendLine($"<td style=\"padding: 8px; border-bottom: 1px solid #ddd; font-size: 12px;\">{breakTimes}</td>");
-                    sb.AppendLine("</tr>");
-                }
-
-                sb.AppendLine("</table>");
+                AppendBreakTable(sb, report.MetricsSummary.ShiftEndSummaries, "#d97706", "Kayıt Sayısı", "Mesai Bitiş Saatleri", trCulture);
             }
         }
 
@@ -451,6 +435,36 @@ public class CdrReportEmailService : ICdrReportEmailService
         if (hours > 0)
             return $"{hours} sa {minutes} dk";
         return $"{minutes} dk";
+    }
+
+    private void AppendBreakTable(StringBuilder sb, List<OperatorBreakSummary> summaries, string headerColor, string countLabel, string timesLabel, System.Globalization.CultureInfo culture)
+    {
+        sb.AppendLine("<table style=\"width: 100%; border-collapse: collapse; margin-bottom: 20px;\">");
+        sb.AppendLine($"<tr style=\"background-color: {headerColor}; color: white;\">");
+        sb.AppendLine("<th style=\"padding: 8px; text-align: left;\">Operatör</th>");
+        sb.AppendLine($"<th style=\"padding: 8px; text-align: center;\">{countLabel}</th>");
+        sb.AppendLine("<th style=\"padding: 8px; text-align: center;\">Toplam Süre</th>");
+        sb.AppendLine($"<th style=\"padding: 8px; text-align: left;\">{timesLabel}</th>");
+        sb.AppendLine("</tr>");
+
+        foreach (var opBreak in summaries)
+        {
+            var breakTimes = string.Join("<br>", opBreak.Breaks.Select(b =>
+            {
+                var start = b.StartTime.ToString("HH:mm", culture);
+                var end = b.EndTime?.ToString("HH:mm", culture) ?? "Devam";
+                return $"{start} - {end} ({b.DurationMinutes:F0} dk)";
+            }));
+
+            sb.AppendLine("<tr>");
+            sb.AppendLine($"<td style=\"padding: 8px; border-bottom: 1px solid #ddd;\">{opBreak.OperatorName}<br><small style=\"color: #666;\">{opBreak.PhoneNumber}</small></td>");
+            sb.AppendLine($"<td style=\"padding: 8px; border-bottom: 1px solid #ddd; text-align: center; font-weight: bold;\">{opBreak.BreakCount}</td>");
+            sb.AppendLine($"<td style=\"padding: 8px; border-bottom: 1px solid #ddd; text-align: center;\">{FormatMinutes(opBreak.TotalDurationMinutes)}</td>");
+            sb.AppendLine($"<td style=\"padding: 8px; border-bottom: 1px solid #ddd; font-size: 12px;\">{breakTimes}</td>");
+            sb.AppendLine("</tr>");
+        }
+
+        sb.AppendLine("</table>");
     }
 
     private string FormatFileSize(long bytes)
