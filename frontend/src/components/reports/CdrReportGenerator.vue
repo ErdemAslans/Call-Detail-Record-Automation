@@ -94,7 +94,29 @@
           </el-collapse>
         </div>
 
-        <!-- Generate Button -->
+        <!-- Email Recipients -->
+        <div class="mt-8">
+          <h4 class="fs-5 fw-semibold mb-3">{{ translate("emailRecipients") }}</h4>
+          <el-select
+            v-model="selectedRecipients"
+            multiple
+            filterable
+            allow-create
+            default-first-option
+            :placeholder="translate('selectOrEnterEmails')"
+            class="w-100"
+          >
+            <el-option
+              v-for="admin in adminRecipients"
+              :key="admin"
+              :label="admin"
+              :value="admin"
+            />
+          </el-select>
+          <p class="text-muted fs-7 mt-2">{{ translate("recipientsHelp") }}</p>
+        </div>
+
+        <!-- Generate & Send Button -->
         <div class="text-center mt-10">
           <button
             type="button"
@@ -103,11 +125,11 @@
             @click="handleGenerateReport"
           >
             <span v-if="!isGenerating">
-              <KTIcon icon-name="document" icon-class="fs-3 me-2" />
-              {{ translate("generateReport") }}
+              <KTIcon icon-name="send" icon-class="fs-3 me-2" />
+              {{ translate("generateAndSendReport") }}
             </span>
             <span v-else class="indicator-progress d-block">
-              {{ translate("generatingReport") }}
+              {{ translate("generatingAndSendingReport") }}
               <span class="spinner-border spinner-border-sm align-middle ms-2"></span>
             </span>
           </button>
@@ -220,57 +242,17 @@
           </button>
         </div>
 
-        <!-- Email Recipients Section -->
-        <div class="separator my-8"></div>
-
-        <h4 class="fs-5 fw-semibold mb-5">{{ translate("emailRecipients") }}</h4>
-
-        <!-- Recipient Tags Input -->
-        <div class="mb-5">
-          <label class="fs-6 fw-semibold mb-2">{{ translate("enterRecipients") }}</label>
-          <el-select
-            v-model="selectedRecipients"
-            multiple
-            filterable
-            allow-create
-            default-first-option
-            :placeholder="translate('selectOrEnterEmails')"
-            class="w-100"
-          >
-            <el-option
-              v-for="admin in adminRecipients"
-              :key="admin"
-              :label="admin"
-              :value="admin"
-            />
-          </el-select>
-          <p class="text-muted fs-7 mt-2">{{ translate("recipientsHelp") }}</p>
-        </div>
-
-        <!-- Send Email Button -->
-        <div class="text-center mt-8">
-          <button
-            type="button"
-            class="btn btn-success btn-lg"
-            :disabled="isSending || selectedRecipients.length === 0"
-            @click="handleSendEmail"
-          >
-            <span v-if="!isSending">
-              <KTIcon icon-name="send" icon-class="fs-3 me-2" />
-              {{ translate("sendViaEmail") }} ({{ selectedRecipients.length }})
-            </span>
-            <span v-else class="indicator-progress d-block">
-              {{ translate("sendingEmail") }}
-              <span class="spinner-border spinner-border-sm align-middle ms-2"></span>
-            </span>
-          </button>
-        </div>
-
-        <!-- Send Error Display -->
-        <div v-if="errors.send" class="alert alert-danger mt-5">
+        <!-- Email Delivery Info -->
+        <div v-if="currentReport?.emailsSent" class="mb-5">
+          <div class="separator my-8"></div>
           <div class="d-flex align-items-center">
-            <KTIcon icon-name="information-5" icon-class="fs-2 text-danger me-3" />
-            <div>{{ errors.send }}</div>
+            <KTIcon icon-name="send" icon-class="fs-2 text-success me-3" />
+            <div>
+              <span class="fw-bold text-success">{{ translate("emailsSentAutomatically") }}</span>
+              <span class="text-muted ms-2">
+                ({{ currentReport.successfulDeliveries }}/{{ currentReport.recipientsCount }} {{ translate("successful") }})
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -461,7 +443,8 @@ const handleGenerateReport = async () => {
     reportType: selectedReportType.value,
     startDate: customStartDate.value || undefined,
     endDate: customEndDate.value || undefined,
-    sendEmail: false,
+    sendEmail: true,
+    emailRecipients: selectedRecipients.value,
   };
   await emailReportStore.generateReport(request);
 };
@@ -469,12 +452,6 @@ const handleGenerateReport = async () => {
 const handleDownloadReport = async () => {
   if (currentReport.value?.reportId) {
     await emailReportStore.downloadReport(currentReport.value.reportId);
-  }
-};
-
-const handleSendEmail = async () => {
-  if (selectedRecipients.value.length > 0) {
-    await emailReportStore.sendReport(selectedRecipients.value);
   }
 };
 

@@ -59,6 +59,7 @@ export interface CdrEmailReportResponse {
   recipientsCount: number;
   successfulDeliveries: number;
   failedDeliveries: number;
+  deliveryStatus: EmailDeliveryStatus[];
 }
 
 /**
@@ -111,6 +112,7 @@ export interface GenerateReportRequest {
   startDate?: string;
   endDate?: string;
   sendEmail?: boolean;
+  emailRecipients?: string[];
 }
 
 /**
@@ -185,8 +187,28 @@ export const useEmailReportStore = defineStore("emailReport", () => {
     try {
       const { data } = await ApiService.post(apiUrlConstants.GENERATE_EMAIL_REPORT, request);
       currentReport.value = data;
-      ResponseMessageService.showMessageByType("emailReport_generated", "success");
-      
+
+      // If emails were sent synchronously, populate delivery status from response
+      if (data.emailsSent && data.recipientsCount > 0) {
+        deliveryStatus.value = {
+          reportExecutionId: data.reportId,
+          totalRecipients: data.recipientsCount,
+          successfulDeliveries: data.successfulDeliveries,
+          failedDeliveries: data.failedDeliveries,
+          pendingDeliveries: 0,
+          overallStatus: data.failedDeliveries === 0 ? "Completed" : "PartialFailure",
+          recipientStatuses: data.deliveryStatus ?? [],
+        };
+
+        if (data.failedDeliveries === 0) {
+          ResponseMessageService.showMessageByType("emailReport_sent", "success");
+        } else {
+          ResponseMessageService.showMessageByType("emailReport_partialSent", "warning");
+        }
+      } else {
+        ResponseMessageService.showMessageByType("emailReport_generated", "success");
+      }
+
       return data;
     } catch (error: any) {
       const errorMessage = error.response?.data?.error?.message || "Rapor oluşturulurken hata oluştu";
