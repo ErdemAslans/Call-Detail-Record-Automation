@@ -31,7 +31,7 @@ public class EmailNotification : INotification<EmailMessage>
     {
         foreach (var to in email.To)
         {
-            var mailMessage = new MailMessage
+            using var mailMessage = new MailMessage
             {
                 From = new MailAddress(_from),
                 Subject = email.Subject,

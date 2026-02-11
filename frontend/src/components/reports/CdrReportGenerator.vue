@@ -360,11 +360,11 @@ const customStartDate = ref<string | null>(null);
 const customEndDate = ref<string | null>(null);
 const selectedRecipients = ref<string[]>([]);
 
-// Default admin recipients (can be loaded from API)
+// Default admin recipients (matching appsettings.json DefaultRecipients)
 const adminRecipients = ref<string[]>([
-  "VeGuler@dogusotomotiv.com.tr",
-  "MTurun@dogusotomotiv.com.tr",
-  "MKanberoglu@dogusotomotiv.com.tr",
+  "vguler@dogusoto.com.tr",
+  "mturun@dogusoto.com.tr",
+  "mkanberoglu@dogusoto.com.tr",
 ]);
 
 // Initialize selected recipients with admin list
