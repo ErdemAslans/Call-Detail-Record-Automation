@@ -71,14 +71,32 @@ namespace Cdr.Api.Repositories
             // MongoDB UTC olarak saklar, bu yüzden dönüşüm gerekli
             var turkeyZone = TimeZoneInfo.FindSystemTimeZoneById("Turkey Standard Time");
             var startUtc = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(startDate, DateTimeKind.Unspecified), turkeyZone);
-            var endUtc = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(endDate, DateTimeKind.Unspecified), turkeyZone);
+            // endDate günün başını temsil eder, günün sonuna kadar (ertesi gün başı) almak için +1 gün ekliyoruz
+            var endUtc = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(endDate.Date.AddDays(1), DateTimeKind.Unspecified), turkeyZone);
 
+            // StartTime bugün aralığında olan VEYA StartTime daha önce olup EndTime bugün aralığında olan molaları getir
             var filter = Builders<Break>.Filter.And(
                 Builders<Break>.Filter.Eq(b => b.UserId, userId),
-                Builders<Break>.Filter.Gte(b => b.StartTime, startUtc),
-                Builders<Break>.Filter.Lte(b => b.StartTime, endUtc)
+                Builders<Break>.Filter.Or(
+                    // Molanın başlangıcı seçilen aralıkta
+                    Builders<Break>.Filter.And(
+                        Builders<Break>.Filter.Gte(b => b.StartTime, startUtc),
+                        Builders<Break>.Filter.Lt(b => b.StartTime, endUtc)
+                    ),
+                    // Molanın bitişi seçilen aralıkta (gece yarısını geçen molalar)
+                    Builders<Break>.Filter.And(
+                        Builders<Break>.Filter.Lt(b => b.StartTime, startUtc),
+                        Builders<Break>.Filter.Or(
+                            Builders<Break>.Filter.And(
+                                Builders<Break>.Filter.Gte(b => b.EndTime, startUtc),
+                                Builders<Break>.Filter.Lt(b => b.EndTime, endUtc)
+                            ),
+                            Builders<Break>.Filter.Eq(b => b.EndTime, null) // Hala devam eden mola
+                        )
+                    )
+                )
             );
-            return await _collection.Find(filter).ToListAsync();
+            return await _collection.Find(filter).SortBy(b => b.StartTime).ToListAsync();
         }
 
         public async Task<List<Break>> GetAllBreaksByDateRangeAsync(DateTime startUtc, DateTime endUtc)

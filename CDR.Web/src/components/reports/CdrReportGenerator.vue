@@ -321,7 +321,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="status in deliveryStatus.deliveryStatuses" :key="status.recipientEmail">
+              <tr v-for="status in deliveryStatus.recipientStatuses" :key="status.recipientEmail">
                 <td>{{ status.recipientEmail }}</td>
                 <td>
                   <span
@@ -467,8 +467,8 @@ const handleGenerateReport = async () => {
 };
 
 const handleDownloadReport = async () => {
-  if (currentReport.value?.executionId) {
-    await emailReportStore.downloadReport(currentReport.value.executionId);
+  if (currentReport.value?.reportId) {
+    await emailReportStore.downloadReport(currentReport.value.reportId);
   }
 };
 

@@ -888,6 +888,7 @@ public class CdrRecordsRepository : ReadonlyMongoRepository<CdrRecord>, ICdrReco
     {
         var totalCalls = calls.Count;
         var incomingCalls = calls.Where(call => call.CallDirection == CallDirection.Incoming).ToList();
+        var outgoingCalls = calls.Count(call => call.CallDirection == CallDirection.Outgoing);
         var answeredCalls = incomingCalls.Count(call => call.Duration > 0 && call.FinalCalledPartyNumber == number);
         var missedCalls = incomingCalls.Count(call => call.Duration == 0 && call.FinalCalledPartyNumber == number);
         var redirectedCalls = incomingCalls.Count(call => call.OriginalCalledPartyNumber == number && call.FinalCalledPartyNumber != number);
@@ -909,6 +910,7 @@ public class CdrRecordsRepository : ReadonlyMongoRepository<CdrRecord>, ICdrReco
         {
             TotalCalls = totalCalls,
             IncomingCalls = incomingCalls.Count,
+            OutgoingCalls = outgoingCalls,
             AnsweredCalls = answeredCalls,
             MissedCalls = missedCalls - onBreakCalls,
             RedirectedCalls = redirectedCalls,
@@ -1016,7 +1018,7 @@ public class CdrRecordsRepository : ReadonlyMongoRepository<CdrRecord>, ICdrReco
                         AnsweredCalls = answered,
                         MissedCalls = missed - onBreak,
                         OnBreakCalls = onBreak,
-                        AnsweredCallRate = (total - onBreak) > 0 ? (double)answered / (total - onBreak) * 100 : 0,
+                        AnsweredCallRate = (total - onBreak) > 0 ? Math.Round((double)answered / (total - onBreak) * 100, 2) : 0,
                     };
                 }).ToList(),
             Outgoing = cdrList
@@ -1034,7 +1036,7 @@ public class CdrRecordsRepository : ReadonlyMongoRepository<CdrRecord>, ICdrReco
                     TotalCalls = g.Count(),
                     AnsweredCalls = g.Count(x => x.cdr.DateTime.Connect != null && x.cdr.Duration > 0),
                     MissedCalls = g.Count(x => x.cdr.DateTime.Connect == null || x.cdr.Duration == 0),
-                    AnsweredCallRate = g.Count() > 0 ? (double)g.Count(x => x.cdr.DateTime.Connect != null && x.cdr.Duration > 0) / g.Count() * 100 : 0,
+                    AnsweredCallRate = g.Count() > 0 ? Math.Round((double)g.Count(x => x.cdr.DateTime.Connect != null && x.cdr.Duration > 0) / g.Count() * 100, 2) : 0,
                 }).ToList(),
             Internal = cdrList
                 .Where(cdr => cdr.CallDirection == CallDirection.Internal)
@@ -1051,7 +1053,7 @@ public class CdrRecordsRepository : ReadonlyMongoRepository<CdrRecord>, ICdrReco
                     TotalCalls = g.Count(),
                     AnsweredCalls = g.Count(x => x.cdr.DateTime.Connect != null && x.cdr.Duration > 0),
                     MissedCalls = g.Count(x => x.cdr.DateTime.Connect == null || x.cdr.Duration == 0),
-                    AnsweredCallRate = g.Count() > 0 ? (double)g.Count(x => x.cdr.DateTime.Connect != null && x.cdr.Duration > 0) / g.Count() * 100 : 0,
+                    AnsweredCallRate = g.Count() > 0 ? Math.Round((double)g.Count(x => x.cdr.DateTime.Connect != null && x.cdr.Duration > 0) / g.Count() * 100, 2) : 0,
                 }).ToList()
         };
 

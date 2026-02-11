@@ -14,6 +14,8 @@ public class CallStatistics
 
     public int OnBreakCalls { get; set; }
 
+    public int OutgoingCalls { get; set; }
+
     public double AnsweredCallRate => (IncomingCalls - RedirectedCalls - OnBreakCalls) <= 0 ? 0 : Math.Round((double)AnsweredCalls / (IncomingCalls - RedirectedCalls - OnBreakCalls) * 100, 2);
 
     public int? TotalDuration { get; set; }

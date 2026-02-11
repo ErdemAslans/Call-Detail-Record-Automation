@@ -45,7 +45,7 @@ export interface CdrReportMetricsSummary {
  * Report generation response
  */
 export interface CdrEmailReportResponse {
-  executionId: string;
+  reportId: string;
   reportType: string;
   periodStartDate: string;
   periodEndDate: string;
@@ -55,8 +55,10 @@ export interface CdrEmailReportResponse {
   recordsProcessed: number;
   generationDurationMs: number;
   metricsSummary: CdrReportMetricsSummary;
-  errorMessage: string | null;
-  isSuccess: boolean;
+  emailsSent: boolean;
+  recipientsCount: number;
+  successfulDeliveries: number;
+  failedDeliveries: number;
 }
 
 /**
@@ -74,11 +76,13 @@ export interface EmailDeliveryStatus {
  * Send email report response
  */
 export interface SendEmailReportResponse {
-  executionId: string;
+  reportExecutionId: string;
   totalRecipients: number;
   successfulDeliveries: number;
   failedDeliveries: number;
-  deliveryStatuses: EmailDeliveryStatus[];
+  pendingDeliveries: number;
+  overallStatus: string;
+  recipientStatuses: EmailDeliveryStatus[];
 }
 
 /**
@@ -115,8 +119,8 @@ export interface GenerateReportRequest {
  * Send email request parameters
  */
 export interface SendEmailRequest {
-  executionId: string;
-  recipients: string[];
+  reportExecutionId: string;
+  emailRecipients: string[];
 }
 
 /**
@@ -182,12 +186,7 @@ export const useEmailReportStore = defineStore("emailReport", () => {
     try {
       const { data } = await ApiService.post(apiUrlConstants.GENERATE_EMAIL_REPORT, request);
       currentReport.value = data;
-      
-      if (data.isSuccess) {
-        ResponseMessageService.showMessageByType("emailReport_generated", "success");
-      } else {
-        setError({ generation: data.errorMessage || "Rapor oluşturulamadı" });
-      }
+      ResponseMessageService.showMessageByType("emailReport_generated", "success");
       
       return data;
     } catch (error: any) {
@@ -217,7 +216,7 @@ export const useEmailReportStore = defineStore("emailReport", () => {
    * Send the current report via email
    */
   async function sendReport(recipients: string[]): Promise<SendEmailReportResponse | null> {
-    if (!currentReport.value?.executionId) {
+    if (!currentReport.value?.reportId) {
       setError({ send: "Önce bir rapor oluşturmalısınız" });
       return null;
     }
@@ -227,8 +226,8 @@ export const useEmailReportStore = defineStore("emailReport", () => {
 
     try {
       const request: SendEmailRequest = {
-        executionId: currentReport.value.executionId,
-        recipients,
+        reportExecutionId: currentReport.value.reportId,
+        emailRecipients: recipients,
       };
       
       const { data } = await ApiService.post(apiUrlConstants.SEND_EMAIL_REPORT, request);

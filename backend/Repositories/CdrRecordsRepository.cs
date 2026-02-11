@@ -888,6 +888,7 @@ public class CdrRecordsRepository : ReadonlyMongoRepository<CdrRecord>, ICdrReco
     {
         var totalCalls = calls.Count;
         var incomingCalls = calls.Where(call => call.CallDirection == CallDirection.Incoming).ToList();
+        var outgoingCalls = calls.Count(call => call.CallDirection == CallDirection.Outgoing);
         var answeredCalls = incomingCalls.Count(call => call.Duration > 0 && call.FinalCalledPartyNumber == number);
         var missedCalls = incomingCalls.Count(call => call.Duration == 0 && call.FinalCalledPartyNumber == number);
         var redirectedCalls = incomingCalls.Count(call => call.OriginalCalledPartyNumber == number && call.FinalCalledPartyNumber != number);
@@ -909,6 +910,7 @@ public class CdrRecordsRepository : ReadonlyMongoRepository<CdrRecord>, ICdrReco
         {
             TotalCalls = totalCalls,
             IncomingCalls = incomingCalls.Count,
+            OutgoingCalls = outgoingCalls,
             AnsweredCalls = answeredCalls,
             MissedCalls = missedCalls - onBreakCalls,
             RedirectedCalls = redirectedCalls,

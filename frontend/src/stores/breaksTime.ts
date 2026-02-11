@@ -4,10 +4,13 @@ import { defineStore } from "pinia";
 import { apiUrlConstants } from "./consts/ApiUrlConstants";
 
 export const useBreaksStore = defineStore("breaks", () => {
+  let lastFetchParams: { startDate: string; endDate: string } | null = null;
+
   function fetchBreaks(params: {
     startDate: string;
     endDate: string;
   }): Promise<FormatedBreakTimesItems[]> {
+    lastFetchParams = params;
     const queryString = Object.entries(params)
       .filter(([, value]) => value !== undefined && value !== null)
       .map(
@@ -72,24 +75,41 @@ export const useBreaksStore = defineStore("breaks", () => {
     // Group breaks by date first
     const breaksByDate = new Map<string, FormatedBreakTimesItems[]>();
 
+    // Seçilen tarih aralığını belirle (mola başlangıcı aralık dışındaysa gösterme)
+    let rangeStartDate: string | null = null;
+    let rangeEndDate: string | null = null;
+    if (lastFetchParams) {
+      rangeStartDate = new Date(lastFetchParams.startDate).toLocaleDateString();
+      // endDate + 1 gün (aralığın son günü dahil)
+      const end = new Date(lastFetchParams.endDate);
+      rangeEndDate = end.toLocaleDateString();
+    }
+
     // Process each break item
     breakTimes.forEach((item) => {
       if (item.startTime) {
         const breakStartDate = new Date(item.startTime).toLocaleDateString();
 
-        // Initialize array for this date if not exists
-        if (!breaksByDate.has(breakStartDate)) {
-          breaksByDate.set(breakStartDate, []);
-        }
+        // Aralık dışındaki mola başlangıçlarını gösterme
+        const isStartInRange = !rangeStartDate || !rangeEndDate ||
+          (new Date(item.startTime) >= new Date(lastFetchParams!.startDate) &&
+           new Date(item.startTime) < new Date(new Date(lastFetchParams!.endDate).getTime() + 86400000));
 
-        // Add break start item
-        breaksByDate.get(breakStartDate)!.push({
-          id: item.id,
-          breakTime: item.startTime,
-          type: "breakStart",
-          reason: item.reason,
-          isEnd: item.endTime ? true : false,
-        });
+        if (isStartInRange) {
+          // Initialize array for this date if not exists
+          if (!breaksByDate.has(breakStartDate)) {
+            breaksByDate.set(breakStartDate, []);
+          }
+
+          // Add break start item
+          breaksByDate.get(breakStartDate)!.push({
+            id: item.id,
+            breakTime: item.startTime,
+            type: "breakStart",
+            reason: item.reason,
+            isEnd: item.endTime ? true : false,
+          });
+        }
       }
 
       if (item.endTime) {
