@@ -466,12 +466,16 @@ public class CdrReportEmailService : ICdrReportEmailService
     private async Task<string> SaveReportFileAsync(CdrReportResult report)
     {
         var reportsDir = Path.Combine(
-            _environment.ContentRootPath, 
+            _environment.ContentRootPath,
             _reportingSettings.ReportStoragePath);
-        
+
         Directory.CreateDirectory(reportsDir);
-        
-        var filePath = Path.Combine(reportsDir, report.FileName);
+
+        // Add executionId to filename to avoid file locking conflicts
+        var uniqueFileName = Path.GetFileNameWithoutExtension(report.FileName)
+            + $"_{report.ExecutionId:N}"
+            + Path.GetExtension(report.FileName);
+        var filePath = Path.Combine(reportsDir, uniqueFileName);
         await File.WriteAllBytesAsync(filePath, report.ExcelData);
 
         _logger.LogDebug("Saved report file to {FilePath}", filePath);
