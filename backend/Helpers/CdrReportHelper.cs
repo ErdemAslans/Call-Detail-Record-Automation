@@ -71,12 +71,12 @@ public static class CdrReportHelper
     public static (DateTime StartDate, DateTime EndDate) GetWeeklyReportPeriod(DateTime? referenceDate = null)
     {
         var turkeyNow = referenceDate ?? GetTurkeyNow();
-        
-        // Find the previous Monday (start of last complete week)
+
+        // Find the previous complete week's Monday
+        // daysFromMonday: Mon=0, Tue=1, Wed=2, Thu=3, Fri=4, Sat=5, Sun=6
         var daysFromMonday = ((int)turkeyNow.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7;
-        if (daysFromMonday == 0) daysFromMonday = 7; // If today is Monday, go back to previous Monday
-        
-        var previousMonday = turkeyNow.Date.AddDays(-daysFromMonday - 6);
+        // Go back to this week's Monday (-daysFromMonday), then one more week (-7)
+        var previousMonday = turkeyNow.Date.AddDays(-daysFromMonday - 7);
         var previousSunday = previousMonday.AddDays(6);
         
         // Start: Monday 00:00:00, End: Sunday 23:59:59.999

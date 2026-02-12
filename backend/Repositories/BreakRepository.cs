@@ -67,12 +67,8 @@ namespace Cdr.Api.Repositories
 
         public async Task<List<Break>> GetBreaksByUserIdAndDateRangeAsync(string userId, DateTime startDate, DateTime endDate)
         {
-            // Frontend'den gelen tarihler Turkey local time (UTC+3)
-            // MongoDB UTC olarak saklar, bu yüzden dönüşüm gerekli
-            var turkeyZone = TimeZoneInfo.FindSystemTimeZoneById("Turkey Standard Time");
-            var startUtc = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(startDate, DateTimeKind.Unspecified), turkeyZone);
-            // endDate günün başını temsil eder, günün sonuna kadar (ertesi gün başı) almak için +1 gün ekliyoruz
-            var endUtc = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(endDate.Date.AddDays(1), DateTimeKind.Unspecified), turkeyZone);
+            // Use TurkeyTimeProvider for consistent UTC conversion (handles both UTC and local input)
+            var (startUtc, endUtc) = TurkeyTimeProvider.ConvertDateRangeToUtc(startDate, endDate);
 
             // StartTime bugün aralığında olan VEYA StartTime daha önce olup EndTime bugün aralığında olan molaları getir
             var filter = Builders<Break>.Filter.And(
@@ -101,9 +97,24 @@ namespace Cdr.Api.Repositories
 
         public async Task<List<Break>> GetAllBreaksByDateRangeAsync(DateTime startUtc, DateTime endUtc)
         {
+            // Use overlap logic: break overlaps with [startUtc, endUtc) if
+            // break started before endUtc AND (break ended after startUtc OR is still ongoing)
             var filter = Builders<Break>.Filter.And(
-                Builders<Break>.Filter.Gte(b => b.StartTime, startUtc),
-                Builders<Break>.Filter.Lt(b => b.StartTime, endUtc)
+                Builders<Break>.Filter.Lt(b => b.StartTime, endUtc),
+                Builders<Break>.Filter.Or(
+                    // Break ended and endTime > startUtc
+                    Builders<Break>.Filter.And(
+                        Builders<Break>.Filter.Ne(b => b.EndTime, null),
+                        Builders<Break>.Filter.Gt(b => b.EndTime, startUtc)
+                    ),
+                    // Break still ongoing (endTime is null) - use plannedEndTime
+                    Builders<Break>.Filter.And(
+                        Builders<Break>.Filter.Eq(b => b.EndTime, null),
+                        Builders<Break>.Filter.Gt(b => b.PlannedEndTime, startUtc)
+                    ),
+                    // Break started within range (covers breaks without endTime/plannedEndTime)
+                    Builders<Break>.Filter.Gte(b => b.StartTime, startUtc)
+                )
             );
             return await _collection.Find(filter).SortBy(b => b.StartTime).ToListAsync();
         }

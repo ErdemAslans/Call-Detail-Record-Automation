@@ -1,4 +1,5 @@
 using System.Drawing;
+using Cdr.Api.Helpers;
 using Cdr.Api.Models;
 using Cdr.Api.Models.Response;
 using Cdr.Api.Models.Response.Dashboard;
@@ -265,9 +266,11 @@ public static class DepartmentCallStatisticsExtensions
             {
                 worksheet.Cells[row, 1].Value = FormatDuration(call.Duration);
                 worksheet.Cells[row, 2].Value = call.CallType.ToString();
-                worksheet.Cells[row, 3].Value = call.DateTimeOrigination;
+                worksheet.Cells[row, 3].Value = CdrReportHelper.ToTurkeyTime(call.DateTimeOrigination);
                 worksheet.Cells[row, 3].Style.Numberformat.Format = "yyyy-mm-dd hh:mm:ss";
-                worksheet.Cells[row, 4].Value = call.DateTimeDisconnect;
+                worksheet.Cells[row, 4].Value = call.DateTimeDisconnect.HasValue
+                    ? CdrReportHelper.ToTurkeyTime(call.DateTimeDisconnect.Value)
+                    : null;
                 worksheet.Cells[row, 4].Style.Numberformat.Format = "yyyy-mm-dd hh:mm:ss";
                 worksheet.Cells[row, 5].Value = call.CallingPartyNumber;
                 worksheet.Cells[row, 6].Value = call.OriginalCalledPartyNumber;
@@ -315,9 +318,11 @@ public static class DepartmentCallStatisticsExtensions
             var row = 2;
             foreach (var breakTime in breakTimes)
             {
-                worksheet.Cells[row, 1].Value = breakTime.BreakStart;
+                worksheet.Cells[row, 1].Value = CdrReportHelper.ToTurkeyTime(breakTime.BreakStart);
                 worksheet.Cells[row, 1].Style.Numberformat.Format = "yyyy-mm-dd hh:mm:ss";
-                worksheet.Cells[row, 2].Value = breakTime.BreakEnd;
+                worksheet.Cells[row, 2].Value = breakTime.BreakEnd.HasValue
+                    ? CdrReportHelper.ToTurkeyTime(breakTime.BreakEnd.Value)
+                    : null;
                 worksheet.Cells[row, 2].Style.Numberformat.Format = "yyyy-mm-dd hh:mm:ss";
                 row++;
             }
