@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Mail;
 using Cdr.Api.Models;
 using Interfaces.Notification;
@@ -5,32 +6,32 @@ using Microsoft.Extensions.Options;
 
 public class EmailNotification : INotification<EmailMessage>
 {
-    private readonly SmtpClient _smtpClient;
+    private readonly EmailSettings _settings;
     private readonly string _from;
 
     public EmailNotification(IOptions<EmailSettings> emailSettings)
     {
-        var settings = emailSettings.Value;
-        
-        _smtpClient = new SmtpClient(settings.Host, settings.Port)
-        {
-            UseDefaultCredentials = false,
-            EnableSsl = false // No SSL for relay
-        };
-        
-        // Only set credentials if username/password are provided
-        if (!string.IsNullOrEmpty(settings.UserName) && !string.IsNullOrEmpty(settings.Password))
-        {
-            _smtpClient.Credentials = new System.Net.NetworkCredential(settings.UserName, settings.Password);
-        }
-
-        _from = settings.From;
+        _settings = emailSettings.Value;
+        _from = _settings.From;
     }
 
     public async Task SendAsync(EmailMessage email)
     {
         foreach (var to in email.To)
         {
+            // Create a fresh SmtpClient per send to avoid stale/corrupt connections
+            using var smtpClient = new SmtpClient(_settings.Host, _settings.Port)
+            {
+                UseDefaultCredentials = false,
+                EnableSsl = false,
+                Timeout = 30000 // 30 second timeout
+            };
+
+            if (!string.IsNullOrEmpty(_settings.UserName) && !string.IsNullOrEmpty(_settings.Password))
+            {
+                smtpClient.Credentials = new NetworkCredential(_settings.UserName, _settings.Password);
+            }
+
             using var mailMessage = new MailMessage
             {
                 From = new MailAddress(_from),
@@ -41,7 +42,6 @@ public class EmailNotification : INotification<EmailMessage>
 
             mailMessage.To.Add(to);
 
-            // Add attachments if any
             foreach (var attachmentPath in email.Attachments)
             {
                 if (File.Exists(attachmentPath))
@@ -50,7 +50,7 @@ public class EmailNotification : INotification<EmailMessage>
                 }
             }
 
-            await _smtpClient.SendMailAsync(mailMessage);
+            await smtpClient.SendMailAsync(mailMessage);
         }
     }
 }
