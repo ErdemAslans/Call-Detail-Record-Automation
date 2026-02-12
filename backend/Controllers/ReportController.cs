@@ -118,6 +118,13 @@ public class ReportController : ControllerBase
     public async Task<IActionResult> GetCallReportList([FromQuery] CdrFilter filter)
     {
         var records = await _cdrRecordsService.GetCallReportListAsync(filter);
+        // Convert UTC timestamps to Turkey time for display
+        foreach (var item in records.Items)
+        {
+            item.DateTimeOrigination = TurkeyTimeProvider.ConvertFromUtc(item.DateTimeOrigination);
+            if (item.DateTimeConnect.HasValue)
+                item.DateTimeConnect = TurkeyTimeProvider.ConvertFromUtc(item.DateTimeConnect.Value);
+        }
         return Ok(records);
     }
 
@@ -152,6 +159,13 @@ public class ReportController : ControllerBase
         }
 
         var records = await _cdrRecordsService.GetUserLastCallsAsync(filter);
+        // Convert UTC timestamps to Turkey time for display
+        foreach (var item in records.Items)
+        {
+            item.DateTimeOrigination = TurkeyTimeProvider.ConvertFromUtc(item.DateTimeOrigination);
+            if (item.DateTimeDisconnect.HasValue)
+                item.DateTimeDisconnect = TurkeyTimeProvider.ConvertFromUtc(item.DateTimeDisconnect.Value);
+        }
         return Ok(records);
     }
 
@@ -199,6 +213,7 @@ public class ReportController : ControllerBase
     public async Task<IActionResult> GetUserCalls([FromQuery] StatisticsFilter filter)
     {
         var result = await _cdrRecordsService.GetUserCalls(filter);
+        ConvertUserReportTimesToTurkey(result);
         return Ok(result);
     }
 
@@ -612,4 +627,31 @@ public class ReportController : ControllerBase
     }
 
     #endregion
+
+    /// <summary>
+    /// Converts all UTC timestamps in a UserSpecificReport to Turkey time for frontend display.
+    /// </summary>
+    private static void ConvertUserReportTimesToTurkey(UserSpecificReport report)
+    {
+        static void ConvertCallList(List<Models.Response.UserStatistics.UserCallListItem> calls)
+        {
+            foreach (var item in calls)
+            {
+                item.DateTimeOrigination = TurkeyTimeProvider.ConvertFromUtc(item.DateTimeOrigination);
+                if (item.DateTimeDisconnect.HasValue)
+                    item.DateTimeDisconnect = TurkeyTimeProvider.ConvertFromUtc(item.DateTimeDisconnect.Value);
+            }
+        }
+
+        ConvertCallList(report.CallDetails);
+        ConvertCallList(report.WorkHours);
+        ConvertCallList(report.NonWorkHours);
+
+        foreach (var bt in report.BreakTimes)
+        {
+            bt.BreakStart = TurkeyTimeProvider.ConvertFromUtc(bt.BreakStart);
+            if (bt.BreakEnd.HasValue)
+                bt.BreakEnd = TurkeyTimeProvider.ConvertFromUtc(bt.BreakEnd.Value);
+        }
+    }
 }
