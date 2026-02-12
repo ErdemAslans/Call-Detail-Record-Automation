@@ -872,13 +872,13 @@ public class CdrRecordsRepository : ReadonlyMongoRepository<CdrRecord>, ICdrReco
         var workHours = calls.Where(call =>
         {
             var localTime = TimeZoneInfo.ConvertTimeFromUtc(call.DateTimeOrigination, turkeyTimeZone).TimeOfDay;
-            return localTime >= new TimeSpan(7, 45, 0) && localTime < new TimeSpan(16, 45, 0);
+            return localTime >= new TimeSpan(7, 45, 0) && localTime <= new TimeSpan(16, 45, 0);
         }).ToList();
 
         var nonWorkHours = calls.Where(call =>
         {
             var localTime = TimeZoneInfo.ConvertTimeFromUtc(call.DateTimeOrigination, turkeyTimeZone).TimeOfDay;
-            return localTime < new TimeSpan(7, 45, 0) || localTime >= new TimeSpan(16, 45, 0);
+            return localTime < new TimeSpan(7, 45, 0) || localTime > new TimeSpan(16, 45, 0);
         }).ToList();
 
         return (workHours, nonWorkHours);
@@ -1122,5 +1122,34 @@ public class CdrRecordsRepository : ReadonlyMongoRepository<CdrRecord>, ICdrReco
                 return true;
         }
         return false;
+    }
+
+    public async Task<(int WorkHoursCalls, int AfterHoursCalls)> GetWorkHoursCallCountsAsync(
+        DateTime startDate, DateTime endDate, List<DateOnly> holidayDates)
+    {
+        var (startUtc, endUtc) = TurkeyTimeProvider.ConvertDateRangeToUtc(startDate, endDate);
+
+        var filter = Builders<CdrRecord>.Filter.And(
+            ApplyGlobalFilter(),
+            Builders<CdrRecord>.Filter.Eq(x => x.CallDirection, CallDirection.Incoming),
+            Builders<CdrRecord>.Filter.Gte(x => x.DateTime!.Origination, startUtc),
+            Builders<CdrRecord>.Filter.Lt(x => x.DateTime!.Origination, endUtc)
+        );
+
+        var originationTimes = await _collection.Find(filter)
+            .Project(Builders<CdrRecord>.Projection.Include(x => x.DateTime!.Origination))
+            .ToListAsync();
+
+        int workHours = 0, afterHours = 0;
+        foreach (var doc in originationTimes)
+        {
+            var origination = doc["dateTime"]["origination"].ToUniversalTime();
+            if (CdrReportHelper.IsWithinWorkHours(origination, holidayDates))
+                workHours++;
+            else
+                afterHours++;
+        }
+
+        return (workHours, afterHours);
     }
 }

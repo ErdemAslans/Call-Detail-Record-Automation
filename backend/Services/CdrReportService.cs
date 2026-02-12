@@ -151,6 +151,12 @@ public class CdrReportService : ICdrReportService
             result.RecordsProcessed = result.MetricsSummary.TotalIncomingCalls +
                                        result.MetricsSummary.TotalOutgoingCalls;
 
+            // Calculate work-hours vs after-hours call counts
+            var (workHoursCalls, afterHoursCalls) = await _cdrRecordsRepository
+                .GetWorkHoursCallCountsAsync(startDate, endDate, holidayDates);
+            result.MetricsSummary.WorkHoursCalls = workHoursCalls;
+            result.MetricsSummary.AfterHoursCalls = afterHoursCalls;
+
             // Calculate break summaries
             await PopulateBreakSummariesAsync(result.MetricsSummary, startDate, endDate);
 
@@ -254,11 +260,6 @@ public class CdrReportService : ICdrReportService
                 (double)summary.TotalAnsweredCalls / summary.TotalIncomingCalls * 100, 
                 2);
         }
-
-        // Note: WorkHoursCalls and AfterHoursCalls would need additional CDR data
-        // that includes timestamps - this is a placeholder for future enhancement
-        summary.WorkHoursCalls = 0; // TODO: Calculate from CDR timestamps
-        summary.AfterHoursCalls = 0; // TODO: Calculate from CDR timestamps
 
         return summary;
     }

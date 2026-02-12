@@ -51,4 +51,10 @@ public interface ICdrRecordsRepository : IReadonlyMongoRepository<CdrRecord>
     /// <param name="filter">The filter containing the number, date range, page index, and page size.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains a <see cref="UserSpecificReport"/> with the user-specific call report.</returns>
     Task<UserSpecificReport> GetUserCalls(StatisticsFilter filter);
+
+    /// <summary>
+    /// Counts incoming calls classified as work-hours vs after-hours for a date range.
+    /// </summary>
+    Task<(int WorkHoursCalls, int AfterHoursCalls)> GetWorkHoursCallCountsAsync(
+        DateTime startDate, DateTime endDate, List<DateOnly> holidayDates);
 }
