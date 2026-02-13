@@ -249,6 +249,7 @@ public class CdrReportService : ICdrReportService
                 summary.TotalAnsweredCalls += dept.AnsweredCalls;
                 summary.TotalMissedCalls += dept.MissedCalls;
                 summary.TotalOnBreakCalls += dept.OnBreakCalls;
+                summary.TotalRedirectedCalls += dept.RedirectedCalls;
             }
         }
 
@@ -261,11 +262,12 @@ public class CdrReportService : ICdrReportService
             }
         }
 
-        // Calculate answer rate
-        if (summary.TotalIncomingCalls > 0)
+        // Calculate answer rate (exclude redirected and on-break from denominator, matching dashboard logic)
+        var effectiveIncoming = summary.TotalIncomingCalls - summary.TotalRedirectedCalls - summary.TotalOnBreakCalls;
+        if (effectiveIncoming > 0)
         {
             summary.AnswerRate = Math.Round(
-                (double)summary.TotalAnsweredCalls / summary.TotalIncomingCalls * 100, 
+                (double)summary.TotalAnsweredCalls / effectiveIncoming * 100,
                 2);
         }
 

@@ -1002,10 +1002,26 @@ public class CdrRecordsRepository : ReadonlyMongoRepository<CdrRecord>, ICdrReco
                 .Select(g =>
                 {
                     var total = g.Count();
-                    var answered = g.Count(x => x.cdr.DateTime.Connect != null && x.cdr.Duration > 0);
-                    var missed = g.Count(x => x.cdr.DateTime.Connect == null || x.cdr.Duration == 0);
-                    // Count on-break calls: missed calls where the called party was on break
+                    // Redirected: user is OriginalCalledParty but NOT FinalCalledParty (call forwarded away)
+                    var redirected = g.Count(x =>
+                        x.User?.PhoneNumber != null &&
+                        x.cdr.OriginalCalledParty?.Number == x.User.PhoneNumber &&
+                        x.cdr.FinalCalledParty?.Number != null &&
+                        x.cdr.FinalCalledParty.Number != x.User.PhoneNumber);
+                    // Answered: connected calls excluding redirected ones
+                    var answered = g.Count(x =>
+                        x.cdr.DateTime.Connect != null && x.cdr.Duration > 0 &&
+                        !(x.User?.PhoneNumber != null &&
+                          x.cdr.OriginalCalledParty?.Number == x.User.PhoneNumber &&
+                          x.cdr.FinalCalledParty?.Number != null &&
+                          x.cdr.FinalCalledParty.Number != x.User.PhoneNumber));
+                    var missed = total - redirected - answered;
+                    // Count on-break calls: non-redirected missed calls where the called party was on break
                     var onBreak = g.Count(x =>
+                        !(x.User?.PhoneNumber != null &&
+                          x.cdr.OriginalCalledParty?.Number == x.User.PhoneNumber &&
+                          x.cdr.FinalCalledParty?.Number != null &&
+                          x.cdr.FinalCalledParty.Number != x.User.PhoneNumber) &&
                         (x.cdr.DateTime.Connect == null || x.cdr.Duration == 0) &&
                         x.cdr.DateTime.Origination.HasValue &&
                         x.User?.PhoneNumber != null &&
@@ -1018,7 +1034,8 @@ public class CdrRecordsRepository : ReadonlyMongoRepository<CdrRecord>, ICdrReco
                         AnsweredCalls = answered,
                         MissedCalls = missed - onBreak,
                         OnBreakCalls = onBreak,
-                        AnsweredCallRate = (total - onBreak) > 0 ? Math.Round((double)answered / (total - onBreak) * 100, 2) : 0,
+                        RedirectedCalls = redirected,
+                        AnsweredCallRate = (total - redirected - onBreak) > 0 ? Math.Round((double)answered / (total - redirected - onBreak) * 100, 2) : 0,
                     };
                 }).ToList(),
             Outgoing = cdrList

@@ -32,6 +32,7 @@ export interface CdrReportMetricsSummary {
   totalAnsweredCalls: number;
   totalMissedCalls: number;
   totalOnBreakCalls: number;
+  totalRedirectedCalls: number;
   totalOutgoingCalls: number;
   answerRate: number;
   workHoursCalls: number;
@@ -158,6 +159,7 @@ export const useEmailReportStore = defineStore("emailReport", () => {
       { label: "Cevaplanan", value: m.totalAnsweredCalls, color: "success" },
       { label: "Kaçırılan", value: m.totalMissedCalls, color: "danger" },
       { label: "Molada Gelen", value: m.totalOnBreakCalls, color: "dark" },
+      { label: "Yönlendirilen", value: m.totalRedirectedCalls ?? 0, color: "info" },
       { label: "Giden Arama", value: m.totalOutgoingCalls, color: "info" },
       { label: "Cevaplama Oranı", value: `${m.answerRate}%`, color: "warning" },
     ];
