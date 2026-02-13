@@ -27,8 +27,24 @@
         <h4 class="fs-5 fw-semibold mb-5">{{ translate("selectReportType") }}</h4>
         
         <div class="row g-5">
+          <!-- Daily Report Card -->
+          <div class="col-md-4">
+            <div
+              class="card border border-2 cursor-pointer h-100"
+              :class="{ 'border-primary bg-light-primary': selectedReportType === 'daily' }"
+              @click="selectedReportType = 'daily'"
+            >
+              <div class="card-body text-center py-10">
+                <KTIcon icon-name="time" icon-class="fs-3x text-success mb-5" />
+                <h3 class="fs-4 fw-bold mb-3">{{ translate("dailyReport") }}</h3>
+                <p class="text-muted fs-6">{{ translate("dailyReportDesc") }}</p>
+                <el-radio v-model="selectedReportType" value="daily" class="mt-3" />
+              </div>
+            </div>
+          </div>
+
           <!-- Weekly Report Card -->
-          <div class="col-md-6">
+          <div class="col-md-4">
             <div
               class="card border border-2 cursor-pointer h-100"
               :class="{ 'border-primary bg-light-primary': selectedReportType === 'weekly' }"
@@ -44,7 +60,7 @@
           </div>
 
           <!-- Monthly Report Card -->
-          <div class="col-md-6">
+          <div class="col-md-4">
             <div
               class="card border border-2 cursor-pointer h-100"
               :class="{ 'border-primary bg-light-primary': selectedReportType === 'monthly' }"

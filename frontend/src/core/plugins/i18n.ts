@@ -283,6 +283,8 @@ const messages = {
     // Email Report translations
     emailReportGenerator: "CDR Email Report Generator",
     selectReportType: "Select Report Type",
+    dailyReport: "Daily Report",
+    dailyReportDesc: "Previous day (Santral only)",
     weeklyReport: "Weekly Report",
     weeklyReportDesc: "Previous complete week (Monday-Sunday)",
     monthlyReport: "Monthly Report",
@@ -759,6 +761,8 @@ const messages = {
     // Email Report translations
     emailReportGenerator: "CDR E-posta Raporu Oluşturucu",
     selectReportType: "Rapor Türünü Seçin",
+    dailyReport: "Günlük Rapor",
+    dailyReportDesc: "Önceki gün (Sadece Santral)",
     weeklyReport: "Haftalık Rapor",
     weeklyReportDesc: "Önceki tam hafta (Pazartesi-Pazar)",
     monthlyReport: "Aylık Rapor",

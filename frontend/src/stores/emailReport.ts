@@ -7,7 +7,7 @@ import ResponseMessageService from "@/core/helpers/ResponseMessageService";
 /**
  * Email report types enum
  */
-export type ReportType = "weekly" | "monthly";
+export type ReportType = "daily" | "weekly" | "monthly";
 
 /**
  * Metrics summary returned from report generation
@@ -222,6 +222,13 @@ export const useEmailReportStore = defineStore("emailReport", () => {
   }
 
   /**
+   * Generate daily report for previous day (Santral only)
+   */
+  async function generateDailyReport(): Promise<CdrEmailReportResponse | null> {
+    return generateReport({ reportType: "daily" });
+  }
+
+  /**
    * Generate weekly report for previous week
    */
   async function generateWeeklyReport(): Promise<CdrEmailReportResponse | null> {
@@ -401,6 +408,7 @@ export const useEmailReportStore = defineStore("emailReport", () => {
     clearError,
     clearReport,
     generateReport,
+    generateDailyReport,
     generateWeeklyReport,
     generateMonthlyReport,
     sendReport,
