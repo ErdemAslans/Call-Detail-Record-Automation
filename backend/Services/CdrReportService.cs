@@ -35,7 +35,7 @@ public interface ICdrReportService
     /// <summary>
     /// Generate a custom period CDR report.
     /// </summary>
-    Task<CdrReportResult> GenerateReportAsync(DateTime startDate, DateTime endDate, ReportPeriod reportType);
+    Task<CdrReportResult> GenerateReportAsync(DateTime startDate, DateTime endDate, ReportPeriod reportType, string? departmentFilter = null);
 
     /// <summary>
     /// Generate a daily operator report for the previous complete day.
@@ -88,7 +88,7 @@ public class CdrReportService : ICdrReportService
     public async Task<CdrReportResult> GenerateDailyReportAsync(DateTime? referenceDate = null)
     {
         var (startDate, endDate) = CdrReportHelper.GetDailyReportPeriod(referenceDate);
-        return await GenerateReportAsync(startDate, endDate, ReportPeriod.Daily);
+        return await GenerateReportAsync(startDate, endDate, ReportPeriod.Daily, "Santral");
     }
 
     /// <inheritdoc />
@@ -106,7 +106,7 @@ public class CdrReportService : ICdrReportService
     }
 
     /// <inheritdoc />
-    public async Task<CdrReportResult> GenerateReportAsync(DateTime startDate, DateTime endDate, ReportPeriod reportType)
+    public async Task<CdrReportResult> GenerateReportAsync(DateTime startDate, DateTime endDate, ReportPeriod reportType, string? departmentFilter = null)
     {
         var stopwatch = Stopwatch.StartNew();
         var executionId = Guid.NewGuid();
@@ -145,6 +145,14 @@ public class CdrReportService : ICdrReportService
             // Get CDR statistics using existing repository method
             // This applies ApplyGlobalFilter() internally to filter "8036..." numbers
             var statistics = await _cdrRecordsRepository.GetDepartmentCallStatisticsAsync(startDate, endDate);
+
+            // Filter to specific department if requested (e.g. Daily report = Santral only)
+            if (!string.IsNullOrEmpty(departmentFilter))
+            {
+                statistics.Incoming = statistics.Incoming.Where(d => d.DepartmentName == departmentFilter).ToList();
+                statistics.Outgoing = statistics.Outgoing.Where(d => d.DepartmentName == departmentFilter).ToList();
+                statistics.Internal = statistics.Internal.Where(d => d.DepartmentName == departmentFilter).ToList();
+            }
 
             // Calculate metrics summary
             result.MetricsSummary = CalculateMetricsSummary(statistics);
