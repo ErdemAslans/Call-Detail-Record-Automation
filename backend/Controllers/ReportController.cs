@@ -309,9 +309,12 @@ public class ReportController : ControllerBase
             }
             else
             {
-                reportResult = request.ReportType == ReportPeriod.Monthly
-                    ? await _cdrReportService.GenerateMonthlyReportAsync()
-                    : await _cdrReportService.GenerateWeeklyReportAsync();
+                reportResult = request.ReportType switch
+                {
+                    ReportPeriod.Daily => await _cdrReportService.GenerateDailyReportAsync(),
+                    ReportPeriod.Monthly => await _cdrReportService.GenerateMonthlyReportAsync(),
+                    _ => await _cdrReportService.GenerateWeeklyReportAsync()
+                };
             }
 
             if (!reportResult.IsSuccess)

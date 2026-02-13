@@ -18,12 +18,12 @@ namespace Cdr.Api.Services
 
         public static void ExecuteJobs()
         {
-            // Daily CDR Email Report - Every day at 06:00 AM Turkey Time
+            // Daily CDR Email Report - Weekdays at 08:00 AM Turkey Time (previous day's report)
             RecurringJob.AddOrUpdate<ICdrReportJobService>(
                 "SendDailyCdrReport",
                 "reports",
                 x => x.SendDailyReportAsync(),
-                "0 6 * * *", // Every day at 06:00
+                "0 8 * * 1-5", // Weekdays at 08:00 (mesai başlangıcı)
                 new RecurringJobOptions
                 {
                     TimeZone = TurkeyTimeZone,
@@ -308,7 +308,9 @@ namespace Cdr.Api.Services
                 // Parse report type
                 var period = reportType.Equals("Monthly", StringComparison.OrdinalIgnoreCase)
                     ? Common.Enums.ReportPeriod.Monthly
-                    : Common.Enums.ReportPeriod.Weekly;
+                    : reportType.Equals("Daily", StringComparison.OrdinalIgnoreCase)
+                        ? Common.Enums.ReportPeriod.Daily
+                        : Common.Enums.ReportPeriod.Weekly;
 
                 // Generate report
                 var report = await _reportService.GenerateReportAsync(startDate, endDate, period);
