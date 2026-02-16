@@ -1,4 +1,5 @@
 using System.Globalization;
+using Cdr.Api.Models.Entities;
 
 namespace Cdr.Api.Helpers;
 
@@ -110,26 +111,43 @@ public static class CdrReportHelper
     /// <param name="utcTime">Time in UTC</param>
     /// <param name="holidayDates">List of holiday dates to exclude from work hours</param>
     /// <returns>True if within work hours</returns>
-    public static bool IsWithinWorkHours(DateTime utcTime, IEnumerable<DateOnly>? holidayDates = null)
+    public static bool IsWithinWorkHours(DateTime utcTime, IEnumerable<DateOnly>? holidayDates = null, List<Break>? shiftEnds = null)
     {
         var turkeyTime = ToTurkeyTime(utcTime);
-        
+
         // Check if weekend
         if (turkeyTime.DayOfWeek == DayOfWeek.Saturday || turkeyTime.DayOfWeek == DayOfWeek.Sunday)
         {
             return false;
         }
-        
+
         // Check if holiday
         var dateOnly = DateOnly.FromDateTime(turkeyTime);
         if (holidayDates?.Contains(dateOnly) == true)
         {
             return false;
         }
-        
+
         // Check time range
         var timeOfDay = turkeyTime.TimeOfDay;
-        return timeOfDay >= WorkHoursStart && timeOfDay <= WorkHoursEnd;
+        if (timeOfDay < WorkHoursStart || timeOfDay > WorkHoursEnd)
+        {
+            return false;
+        }
+
+        // Check if operator had ended shift at this time
+        if (shiftEnds != null)
+        {
+            foreach (var se in shiftEnds)
+            {
+                var effectiveEnd = se.EndTime ?? se.PlannedEndTime;
+                if (effectiveEnd == default) continue;
+                if (utcTime >= se.StartTime && utcTime <= effectiveEnd)
+                    return false;
+            }
+        }
+
+        return true;
     }
 
     /// <summary>

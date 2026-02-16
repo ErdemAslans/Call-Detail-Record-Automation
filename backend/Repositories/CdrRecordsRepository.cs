@@ -1078,6 +1078,48 @@ public class CdrRecordsRepository : ReadonlyMongoRepository<CdrRecord>, ICdrReco
     }
 
     /// <summary>
+    /// Retrieves EndOfShift breaks that overlap with the given UTC time range.
+    /// Returns breaks grouped by user's phone number for efficient lookup.
+    /// </summary>
+    private async Task<Dictionary<string, List<Break>>> GetShiftEndsByPhoneNumberAsync(DateTime startUtc, DateTime endUtc)
+    {
+        var breakFilter = Builders<Break>.Filter.And(
+            Builders<Break>.Filter.Eq(b => b.BreakType, "EndOfShift"),
+            Builders<Break>.Filter.Lt(b => b.StartTime, endUtc),
+            Builders<Break>.Filter.Or(
+                Builders<Break>.Filter.And(
+                    Builders<Break>.Filter.Eq(b => b.EndTime, null),
+                    Builders<Break>.Filter.Gt(b => b.PlannedEndTime, startUtc)
+                ),
+                Builders<Break>.Filter.And(
+                    Builders<Break>.Filter.Ne(b => b.EndTime, null),
+                    Builders<Break>.Filter.Gt(b => b.EndTime, startUtc)
+                )
+            )
+        );
+
+        var shiftEnds = await _breakCollection.Find(breakFilter).ToListAsync();
+        if (shiftEnds.Count == 0) return new Dictionary<string, List<Break>>();
+
+        var userIds = shiftEnds.Select(b => b.UserId).Distinct().ToList();
+        var userFilter = Builders<Operator>.Filter.In(u => u.Id, userIds);
+        var users = await _userCollection.Find(userFilter).ToListAsync();
+        var userPhoneMap = users.ToDictionary(u => u.Id, u => u.PhoneNumber);
+
+        var result = new Dictionary<string, List<Break>>();
+        foreach (var b in shiftEnds)
+        {
+            if (userPhoneMap.TryGetValue(b.UserId, out var phone))
+            {
+                if (!result.ContainsKey(phone))
+                    result[phone] = new List<Break>();
+                result[phone].Add(b);
+            }
+        }
+        return result;
+    }
+
+    /// <summary>
     /// Retrieves all breaks that overlap with the given UTC time range.
     /// Returns breaks grouped by user's phone number for efficient lookup.
     /// </summary>
@@ -1153,15 +1195,37 @@ public class CdrRecordsRepository : ReadonlyMongoRepository<CdrRecord>, ICdrReco
             Builders<CdrRecord>.Filter.Lt(x => x.DateTime!.Origination, endUtc)
         );
 
-        var originationTimes = await _collection.Find(filter)
-            .Project(Builders<CdrRecord>.Projection.Include(x => x.DateTime!.Origination))
+        // Project origination time + called party numbers for EndOfShift cross-check
+        var calls = await _collection.Find(filter)
+            .Project(Builders<CdrRecord>.Projection
+                .Include(x => x.DateTime!.Origination)
+                .Include(x => x.FinalCalledParty!.Number)
+                .Include(x => x.OriginalCalledParty!.Number))
             .ToListAsync();
 
+        // Fetch EndOfShift records for the period
+        var shiftEndsByPhone = await GetShiftEndsByPhoneNumberAsync(startUtc, endUtc);
+
         int workHours = 0, afterHours = 0;
-        foreach (var doc in originationTimes)
+        foreach (var doc in calls)
         {
             var origination = doc["dateTime"]["origination"].ToUniversalTime();
-            if (CdrReportHelper.IsWithinWorkHours(origination, holidayDates))
+
+            // Determine which operator received this call
+            List<Break>? operatorShiftEnds = null;
+            if (shiftEndsByPhone.Count > 0)
+            {
+                var finalNumber = doc.Contains("finalCalledParty") && !doc["finalCalledParty"].IsBsonNull
+                    ? doc["finalCalledParty"]["number"].AsString : null;
+                var originalNumber = doc.Contains("originalCalledParty") && !doc["originalCalledParty"].IsBsonNull
+                    ? doc["originalCalledParty"]["number"].AsString : null;
+                var numberToCheck = finalNumber ?? originalNumber;
+
+                if (numberToCheck != null)
+                    shiftEndsByPhone.TryGetValue(numberToCheck, out operatorShiftEnds);
+            }
+
+            if (CdrReportHelper.IsWithinWorkHours(origination, holidayDates, operatorShiftEnds))
                 workHours++;
             else
                 afterHours++;

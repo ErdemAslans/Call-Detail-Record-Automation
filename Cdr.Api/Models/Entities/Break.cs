@@ -25,6 +25,9 @@ namespace Cdr.Api.Models.Entities
         [BsonElement("reason")]
         public string? Reason { get; set; }
 
+        [BsonElement("breakType")]
+        public string BreakType { get; set; } = "Break";
+
         [BsonElement("user")]
         [BsonIgnoreIfNull]
         public Operator User { get; set; }

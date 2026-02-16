@@ -841,7 +841,9 @@ public class CdrRecordsRepository : ReadonlyMongoRepository<CdrRecord>, ICdrReco
             CallDirection = cdr.Contains("callDirection") && !cdr["callDirection"].IsBsonNull ? (CallDirection)cdr["callDirection"].AsInt32 : (CallDirection?)null
         }).OrderByDescending(o => o.DateTimeOrigination).ToList();
 
-        var (workHours, nonWorkHours) = SeparateCallsByWorkHours(resultItems);
+        // Fetch EndOfShift records for accurate work-hours classification
+        var shiftEndsByPhone = await GetShiftEndsByPhoneNumberAsync(startUtc, endUtc);
+        var (workHours, nonWorkHours) = SeparateCallsByWorkHours(resultItems, filter.Number, shiftEndsByPhone);
 
         // Fetch breaks for this operator to cross-check missed calls
         var breaksByPhone = await GetBreaksByPhoneNumberAsync(startUtc, endUtc);
@@ -865,21 +867,44 @@ public class CdrRecordsRepository : ReadonlyMongoRepository<CdrRecord>, ICdrReco
         };
     }
 
-    private (List<UserCallListItem> WorkHours, List<UserCallListItem> NonWorkHours) SeparateCallsByWorkHours(List<UserCallListItem> calls)
+    private (List<UserCallListItem> WorkHours, List<UserCallListItem> NonWorkHours) SeparateCallsByWorkHours(
+        List<UserCallListItem> calls,
+        string? operatorNumber = null,
+        Dictionary<string, List<Break>>? shiftEndsByPhone = null)
     {
         var turkeyTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Turkey Standard Time");
 
-        var workHours = calls.Where(call =>
+        // Get this operator's shift ends if available
+        List<Break>? operatorShiftEnds = null;
+        if (operatorNumber != null && shiftEndsByPhone != null)
         {
-            var localTime = TimeZoneInfo.ConvertTimeFromUtc(call.DateTimeOrigination, turkeyTimeZone).TimeOfDay;
-            return localTime >= new TimeSpan(7, 45, 0) && localTime < new TimeSpan(16, 45, 0);
-        }).ToList();
+            shiftEndsByPhone.TryGetValue(operatorNumber, out operatorShiftEnds);
+        }
 
-        var nonWorkHours = calls.Where(call =>
+        var workHours = new List<UserCallListItem>();
+        var nonWorkHours = new List<UserCallListItem>();
+
+        foreach (var call in calls)
         {
             var localTime = TimeZoneInfo.ConvertTimeFromUtc(call.DateTimeOrigination, turkeyTimeZone).TimeOfDay;
-            return localTime < new TimeSpan(7, 45, 0) || localTime >= new TimeSpan(16, 45, 0);
-        }).ToList();
+
+            // Outside fixed work hours: always non-work
+            if (localTime < new TimeSpan(7, 45, 0) || localTime > new TimeSpan(16, 45, 0))
+            {
+                nonWorkHours.Add(call);
+                continue;
+            }
+
+            // Within fixed work hours: check if operator had ended shift
+            if (operatorShiftEnds != null && IsCallDuringBreak(call.DateTimeOrigination, operatorShiftEnds))
+            {
+                nonWorkHours.Add(call);
+            }
+            else
+            {
+                workHours.Add(call);
+            }
+        }
 
         return (workHours, nonWorkHours);
     }
@@ -1058,6 +1083,48 @@ public class CdrRecordsRepository : ReadonlyMongoRepository<CdrRecord>, ICdrReco
         };
 
         return departmentCalls;
+    }
+
+    /// <summary>
+    /// Retrieves EndOfShift breaks that overlap with the given UTC time range.
+    /// Returns breaks grouped by user's phone number for efficient lookup.
+    /// </summary>
+    private async Task<Dictionary<string, List<Break>>> GetShiftEndsByPhoneNumberAsync(DateTime startUtc, DateTime endUtc)
+    {
+        var breakFilter = Builders<Break>.Filter.And(
+            Builders<Break>.Filter.Eq(b => b.BreakType, "EndOfShift"),
+            Builders<Break>.Filter.Lt(b => b.StartTime, endUtc),
+            Builders<Break>.Filter.Or(
+                Builders<Break>.Filter.And(
+                    Builders<Break>.Filter.Eq(b => b.EndTime, null),
+                    Builders<Break>.Filter.Gt(b => b.PlannedEndTime, startUtc)
+                ),
+                Builders<Break>.Filter.And(
+                    Builders<Break>.Filter.Ne(b => b.EndTime, null),
+                    Builders<Break>.Filter.Gt(b => b.EndTime, startUtc)
+                )
+            )
+        );
+
+        var shiftEnds = await _breakCollection.Find(breakFilter).ToListAsync();
+        if (shiftEnds.Count == 0) return new Dictionary<string, List<Break>>();
+
+        var userIds = shiftEnds.Select(b => b.UserId).Distinct().ToList();
+        var userFilter = Builders<Operator>.Filter.In(u => u.Id, userIds);
+        var users = await _userCollection.Find(userFilter).ToListAsync();
+        var userPhoneMap = users.ToDictionary(u => u.Id, u => u.PhoneNumber);
+
+        var result = new Dictionary<string, List<Break>>();
+        foreach (var b in shiftEnds)
+        {
+            if (userPhoneMap.TryGetValue(b.UserId, out var phone))
+            {
+                if (!result.ContainsKey(phone))
+                    result[phone] = new List<Break>();
+                result[phone].Add(b);
+            }
+        }
+        return result;
     }
 
     /// <summary>
