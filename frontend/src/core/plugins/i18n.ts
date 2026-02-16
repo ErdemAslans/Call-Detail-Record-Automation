@@ -476,6 +476,16 @@ const messages = {
     user_fetchOperators: "Operators fetched",
     userStatistics_userNonWorkHourStatisticsFetched: "Non-work hour statistics fetched",
     userStatistics_userWorkHourStatisticsFetched: "Work hour statistics fetched",
+    userStatistics_userSpecificReportExported: "User specific report exported",
+    // Admin break tracking
+    selectOperator: "Select Operator",
+    selectOperatorPlaceholder: "Select an operator...",
+    selectOperatorToViewBreaks: "Select an operator to view their breaks",
+    operatorHasOngoingBreak: "This operator has an ongoing break",
+    forceEndBreak: "Force End Break",
+    breakForceEnded: "Break has been force ended",
+    breakForceEndError: "Failed to force end break",
+    breaks_ongoingBreakError: "You already have an ongoing break. Please end it first.",
   },
   tr: {
     dashboard: "Gösterge Paneli",
@@ -975,6 +985,16 @@ const messages = {
     user_fetchOperators: "Operatörler getirildi",
     userStatistics_userNonWorkHourStatisticsFetched: "Mesai dışı istatistikleri getirildi",
     userStatistics_userWorkHourStatisticsFetched: "Mesai içi istatistikleri getirildi",
+    userStatistics_userSpecificReportExported: "Kullanıcı raporu dışa aktarıldı",
+    // Admin mola takibi
+    selectOperator: "Operatör Seç",
+    selectOperatorPlaceholder: "Bir operatör seçin...",
+    selectOperatorToViewBreaks: "Molaları görüntülemek için bir operatör seçin",
+    operatorHasOngoingBreak: "Bu operatörün devam eden bir molası var",
+    forceEndBreak: "Molayı Zorla Bitir",
+    breakForceEnded: "Mola zorla bitirildi",
+    breakForceEndError: "Mola zorla bitirilemedi",
+    breaks_ongoingBreakError: "Zaten açık bir molanız var. Lütfen önce mevcut molayı kapatın.",
   },
 };
 

@@ -6,6 +6,7 @@ export interface MenuItem {
   keenthemesIcon?: string;
   bootstrapIcon?: string;
   sub?: Array<MenuItem>;
+  roles?: string[];
 }
 
 interface General {

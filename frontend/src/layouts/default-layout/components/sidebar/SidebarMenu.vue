@@ -19,7 +19,7 @@
         class="menu menu-column menu-rounded menu-sub-indention px-3"
         data-kt-menu="true"
       >
-        <template v-for="(item, i) in MainMenuConfig" :key="i">
+        <template v-for="(item, i) in filteredMenuConfig" :key="i">
           <div v-if="item.heading" class="menu-item pt-5">
             <div class="menu-content">
               <span class="menu-heading fw-bold text-uppercase fs-7">
@@ -159,11 +159,12 @@
 
 <script lang="ts">
 import { getAssetPath } from "@/core/helpers/assets";
-import { defineComponent, onMounted, ref } from "vue";
+import { defineComponent, onMounted, ref, computed } from "vue";
 import { useRoute } from "vue-router";
 import MainMenuConfig from "@/layouts/default-layout/config/CleanMainMenuConfig";
 import { sidebarMenuIcons } from "@/layouts/default-layout/config/helper";
 import { useI18n } from "vue-i18n";
+import { useAuthStore } from "@/stores/auth";
 
 export default defineComponent({
   name: "sidebar-menu",
@@ -171,12 +172,23 @@ export default defineComponent({
   setup() {
     const { t, te } = useI18n();
     const route = useRoute();
+    const authStore = useAuthStore();
     const scrollElRef = ref<null | HTMLElement>(null);
 
     onMounted(() => {
       if (scrollElRef.value) {
         scrollElRef.value.scrollTop = 0;
       }
+    });
+
+    const filteredMenuConfig = computed(() => {
+      return MainMenuConfig.map((section) => ({
+        ...section,
+        pages: section.pages?.filter((page) => {
+          if (!page.roles || page.roles.length === 0) return true;
+          return page.roles.some((role) => authStore.user.roles.includes(role));
+        }),
+      })).filter((section) => section.pages && section.pages.length > 0);
     });
 
     const translate = (text: string) => {
@@ -193,7 +205,7 @@ export default defineComponent({
 
     return {
       hasActiveChildren,
-      MainMenuConfig,
+      filteredMenuConfig,
       sidebarMenuIcons,
       translate,
       getAssetPath,

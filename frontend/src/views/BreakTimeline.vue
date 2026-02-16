@@ -12,7 +12,8 @@
             class="nav nav-tabs nav-line-tabs nav-stretch fs-6 border-0 fw-bold"
             role="tablist"
           >
-            <li class="nav-item" role="presentation">
+            <!-- Central: Break start/end/shift buttons -->
+            <li v-if="!isAdmin" class="nav-item" role="presentation">
               <button
                 v-if="ongoingBreaks"
                 class="btn btn-sm btn-success align-self-center me-2"
@@ -37,6 +38,16 @@
                   {{ $t("endShift") }}
                 </button>
               </template>
+            </li>
+            <!-- Admin: Force end break button -->
+            <li v-if="isAdmin && ongoingBreaks && selectedOperator" class="nav-item" role="presentation">
+              <button
+                class="btn btn-sm btn-danger align-self-center me-2"
+                @click="adminForceEnd"
+              >
+                <KTIcon icon-name="cross-circle" icon-class="fs-3 text-white me-2" />
+                {{ $t("forceEndBreak") }}
+              </button>
             </li>
             <li class="nav-item" role="presentation">
               <a
@@ -93,10 +104,45 @@
       </div>
       <!--end::Header-->
 
+      <!-- Admin: Operator Selector -->
+      <div v-if="isAdmin" class="card-body border-bottom py-4">
+        <div class="row align-items-center">
+          <div class="col-md-6">
+            <label class="form-label fw-bold">{{ $t("selectOperator") }}</label>
+            <select
+              class="form-select form-select-solid"
+              v-model="selectedOperator"
+              @change="onOperatorChange"
+            >
+              <option value="">{{ $t("selectOperatorPlaceholder") }}</option>
+              <option
+                v-for="op in operators"
+                :key="op.number"
+                :value="op.number"
+              >
+                {{ op.name }} ({{ op.number }}) - {{ op.department }}
+              </option>
+            </select>
+          </div>
+          <div v-if="selectedOperator && ongoingBreaks" class="col-md-6 mt-3 mt-md-0">
+            <div class="alert alert-warning d-flex align-items-center mb-0 py-3">
+              <KTIcon icon-name="information-3" icon-class="fs-2 text-warning me-3" />
+              <span>{{ $t("operatorHasOngoingBreak") }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!--begin::Body-->
       <div class="card-body" id="kt_activities_body">
+        <!-- Admin: no operator selected message -->
+        <div v-if="isAdmin && !selectedOperator" class="text-center text-muted py-10">
+          <KTIcon icon-name="people" icon-class="fs-2tx text-gray-300 mb-5" />
+          <p class="fs-5">{{ $t("selectOperatorToViewBreaks") }}</p>
+        </div>
         <!--begin::Content-->
         <div
+          v-else
           id="kt_activities_scroll"
           class="scroll-y me-n5 pe-5"
           data-kt-scroll="true"
@@ -122,18 +168,15 @@
 
       <!--begin::Footer-->
       <div class="card-footer py-5 text-center" id="kt_activities_footer">
-        <!-- <a href="#" class="btn btn-bg-body text-primary">
-          View All Activities
-          <KTIcon icon-name="arrow-right" icon-class="fs-3 text-primary" />
-        </a> -->
       </div>
       <!--end::Footer-->
     </div>
   </div>
   <!--end::Activities drawer-->
 
-  <!-- Break Reason Modal -->
+  <!-- Break Reason Modal (Central only) -->
   <div
+    v-if="!isAdmin"
     class="modal fade"
     id="breakReasonModal"
     tabindex="-1"
@@ -208,9 +251,12 @@
 
 <script lang="ts">
 import { getAssetPath } from "@/core/helpers/assets";
-import { defineComponent, onMounted, ref } from "vue";
+import { defineComponent, onMounted, ref, computed } from "vue";
 import BreakItem from "@/components/activity-timeline-items/BreakItem.vue";
 import { useBreaksStore } from "@/stores/breaksTime";
+import { useUserStatisticsStore } from "@/stores/userStatistics";
+import { useOperatorStore } from "@/stores/operator";
+import { useAuthStore } from "@/stores/auth";
 import { Modal } from "bootstrap";
 import { ElMessage } from "element-plus";
 import i18n from "@/core/plugins/i18n";
@@ -221,10 +267,19 @@ export default defineComponent({
     BreakItem,
   },
   setup() {
-    const breaks = ref<FormatedBreakTimesItems[]>([]);
+    const authStore = useAuthStore();
     const breaksTimeStore = useBreaksStore();
+    const userStatisticsStore = useUserStatisticsStore();
+    const operatorStore = useOperatorStore();
+
+    const isAdmin = computed(() => authStore.hasRole("Admin"));
+    const operators = computed(() => operatorStore.operators);
+    const selectedOperator = ref("");
+
+    const breaks = ref<FormatedBreakTimesItems[]>([]);
     const ongoingBreaks = ref(false);
     const ongoingBreakId = ref<string | null>(null);
+    const ongoingBreakUserId = ref<string | null>(null);
     const breakReason = ref("");
     const breakReasonError = ref("");
     const plannedEndTimeLocal = ref("");
@@ -246,7 +301,6 @@ export default defineComponent({
           end: new Date(y, m, d),
         },
         week: {
-          // Pazartesi başlangıçlı hafta (getDay: 0=Pazar, 1=Pazartesi...)
           start: new Date(y, m, d - ((now.getDay() + 6) % 7)),
           end: new Date(y, m, d - ((now.getDay() + 6) % 7) + 6),
         },
@@ -270,25 +324,143 @@ export default defineComponent({
     const startDate = ref(start);
     const endDate = ref(end);
 
+    // --- Central: ongoing break check ---
     const checkOngoingBreak = async () => {
-      const ongoing = await breaksTimeStore.fetchOngoingBreak();
-      if (ongoing) {
-        ongoingBreaks.value = true;
-        ongoingBreakId.value = ongoing.id;
+      if (isAdmin.value) {
+        if (!selectedOperator.value) return;
+        const ongoing = await userStatisticsStore.fetchAdminOngoingBreak(selectedOperator.value);
+        if (ongoing) {
+          ongoingBreaks.value = true;
+          ongoingBreakId.value = ongoing.id;
+          ongoingBreakUserId.value = ongoing.userId || null;
+        } else {
+          ongoingBreaks.value = false;
+          ongoingBreakId.value = null;
+          ongoingBreakUserId.value = null;
+        }
       } else {
-        ongoingBreaks.value = false;
-        ongoingBreakId.value = null;
+        const ongoing = await breaksTimeStore.fetchOngoingBreak();
+        if (ongoing) {
+          ongoingBreaks.value = true;
+          ongoingBreakId.value = ongoing.id;
+        } else {
+          ongoingBreaks.value = false;
+          ongoingBreakId.value = null;
+        }
       }
     };
 
+    // --- Fetch breaks: role-based API ---
     const fetchBreaksAndUpdateStatus = async () => {
-      breaks.value = await breaksTimeStore.fetchBreaks({
-        startDate: startDate.value,
-        endDate: endDate.value,
-      });
+      if (isAdmin.value) {
+        if (!selectedOperator.value) return;
+        const data = await userStatisticsStore.fetchBreakTimes({
+          startDate: startDate.value,
+          endDate: endDate.value,
+          number: selectedOperator.value,
+        });
+        breaks.value = formatBreakTimes(data || []);
+      } else {
+        breaks.value = await breaksTimeStore.fetchBreaks({
+          startDate: startDate.value,
+          endDate: endDate.value,
+        });
+      }
       await checkOngoingBreak();
     };
 
+    // --- Format break times (reused from breaksTime store for admin data) ---
+    const formatBreakTimes = (
+      breakTimes: BreakListItem[],
+    ): FormatedBreakTimesItems[] => {
+      const breaksByDate = new Map<string, FormatedBreakTimesItems[]>();
+
+      breakTimes.forEach((item) => {
+        if (item.startTime) {
+          const breakStartDate = new Date(item.startTime).toLocaleDateString();
+
+          if (!breaksByDate.has(breakStartDate)) {
+            breaksByDate.set(breakStartDate, []);
+          }
+
+          breaksByDate.get(breakStartDate)!.push({
+            id: item.id,
+            breakTime: item.startTime,
+            type: item.breakType === "EndOfShift" ? "shiftEnd" : "breakStart",
+            reason: item.reason,
+            isEnd: item.endTime ? true : false,
+            breakType: item.breakType,
+          });
+        }
+
+        if (item.endTime) {
+          const breakEndDate = new Date(item.endTime).toLocaleDateString();
+
+          if (!breaksByDate.has(breakEndDate)) {
+            breaksByDate.set(breakEndDate, []);
+          }
+
+          breaksByDate.get(breakEndDate)!.push({
+            id: item.id,
+            breakTime: item.endTime,
+            type: "breakEnd",
+            isEnd: true,
+          });
+        }
+      });
+
+      const result: FormatedBreakTimesItems[] = [];
+      const sortedDates = Array.from(breaksByDate.keys()).sort(
+        (a, b) => new Date(b).getTime() - new Date(a).getTime(),
+      );
+
+      for (const date of sortedDates) {
+        result.push({
+          id: date,
+          breakTime: new Date(date).toISOString(),
+          type: "date",
+          isEnd: false,
+        });
+
+        const dateItems = breaksByDate
+          .get(date)!
+          .sort(
+            (a, b) =>
+              new Date(b.breakTime).getTime() - new Date(a.breakTime).getTime(),
+          );
+
+        result.push(...dateItems);
+      }
+
+      return result;
+    };
+
+    // --- Admin: force end break ---
+    const adminForceEnd = async () => {
+      if (!ongoingBreakUserId.value && !ongoingBreakId.value) return;
+      try {
+        await userStatisticsStore.adminForceEndBreak(
+          ongoingBreakUserId.value || ongoingBreakId.value!,
+        );
+        ElMessage.success(i18n.global.t("breakForceEnded"));
+        await fetchBreaksAndUpdateStatus();
+      } catch {
+        ElMessage.error(i18n.global.t("breakForceEndError"));
+      }
+    };
+
+    // --- Admin: operator change ---
+    const onOperatorChange = () => {
+      breaks.value = [];
+      ongoingBreaks.value = false;
+      ongoingBreakId.value = null;
+      ongoingBreakUserId.value = null;
+      if (selectedOperator.value) {
+        fetchBreaksAndUpdateStatus();
+      }
+    };
+
+    // --- Central: modal & break actions ---
     const getDefaultPlannedEndTime = (): string => {
       const now = new Date();
       now.setMinutes(now.getMinutes() + 30);
@@ -301,7 +473,6 @@ export default defineComponent({
       plannedEndTimeLocal.value = getDefaultPlannedEndTime();
       plannedEndTimeError.value = "";
 
-      // Initialize and show the modal
       if (!breakModal.value) {
         const modalElement = document.getElementById("breakReasonModal");
         if (modalElement) {
@@ -322,7 +493,6 @@ export default defineComponent({
         return;
       }
 
-      // Convert local time input to UTC ISO string
       const [hours, minutes] = plannedEndTimeLocal.value.split(":").map(Number);
       const plannedEnd = new Date();
       plannedEnd.setHours(hours, minutes, 0, 0);
@@ -390,17 +560,28 @@ export default defineComponent({
       const { start, end } = getDateRange(range);
       startDate.value = start;
       endDate.value = end;
-      fetchBreaksAndUpdateStatus();
+      if (!isAdmin.value || selectedOperator.value) {
+        fetchBreaksAndUpdateStatus();
+      }
     };
 
     onMounted(async () => {
-      await fetchBreaksAndUpdateStatus();
+      if (isAdmin.value) {
+        await operatorStore.fetchOperators();
+      } else {
+        await fetchBreaksAndUpdateStatus();
+      }
     });
 
     return {
       getAssetPath,
       breaks,
       ongoingBreaks,
+      isAdmin,
+      operators,
+      selectedOperator,
+      onOperatorChange,
+      adminForceEnd,
       startNewBreak,
       endCurrentBreak,
       handleEndShift,

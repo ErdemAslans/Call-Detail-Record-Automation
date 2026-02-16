@@ -71,7 +71,7 @@ const routes: Array<RouteRecordRaw> = [
         meta: {
           pageTitle: "Breaks",
           breadcrumbs: ["Breaks"],
-          roles: ["Central"],
+          roles: ["Central", "Admin"],
         },
       },
       {
