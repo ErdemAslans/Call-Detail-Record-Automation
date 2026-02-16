@@ -78,7 +78,7 @@
             <!--begin::Badge-->
             <div class="timeline-badge">
               <i
-                :class="`fa fa-genderless ${item.type === 'breakStart' ? 'text-danger' : 'text-success'} fs-1`"
+                :class="`fa fa-genderless ${item.type === 'shiftEnd' ? 'text-warning' : item.type === 'breakStart' ? 'text-danger' : 'text-success'} fs-1`"
               ></i>
             </div>
             <!--end::Badge-->
@@ -195,7 +195,7 @@ export default defineComponent({
           }
           result.push({
             breakTime: item.startTime,
-            type: "breakStart",
+            type: item.breakType === "EndOfShift" ? "shiftEnd" : "breakStart",
             reason: item.reason,
           });
         }

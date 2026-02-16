@@ -74,7 +74,7 @@
 
             <!--begin::Action-->
             <button
-              v-if="!breakItem.isEnd"
+              v-if="!breakItem.isEnd && breakItem.type !== 'shiftEnd'"
               class="btn btn-success px-6 align-self-center text-nowrap"
               @click="handleEndBreak"
             >
