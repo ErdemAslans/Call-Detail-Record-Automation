@@ -486,6 +486,11 @@ const messages = {
     breakForceEnded: "Break has been force ended",
     breakForceEndError: "Failed to force end break",
     breaks_ongoingBreakError: "You already have an ongoing break. Please end it first.",
+    startShift: "Start Shift",
+    shiftStartedSuccess: "Shift has been started successfully",
+    shiftStartError: "Failed to start shift",
+    endShiftWithBreakConfirmation: "Your ongoing break will be closed and your shift will be ended. Do you want to continue?",
+    operatorShiftEnded: "This operator's shift has ended",
   },
   tr: {
     dashboard: "Gösterge Paneli",
@@ -995,6 +1000,11 @@ const messages = {
     breakForceEnded: "Mola zorla bitirildi",
     breakForceEndError: "Mola zorla bitirilemedi",
     breaks_ongoingBreakError: "Zaten açık bir molanız var. Lütfen önce mevcut molayı kapatın.",
+    startShift: "Mesai'ye Başla",
+    shiftStartedSuccess: "Mesai başarıyla başlatıldı",
+    shiftStartError: "Mesai başlatılırken hata oluştu",
+    endShiftWithBreakConfirmation: "Devam eden molanız kapatılıp mesainiz bitirilecektir. Devam etmek istiyor musunuz?",
+    operatorShiftEnded: "Bu operatörün mesaisi bitmiş durumda",
   },
 };
 

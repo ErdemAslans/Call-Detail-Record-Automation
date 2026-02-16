@@ -12,36 +12,59 @@
             class="nav nav-tabs nav-line-tabs nav-stretch fs-6 border-0 fw-bold"
             role="tablist"
           >
-            <!-- Central: Break start/end/shift buttons -->
+            <!-- Central: Buttons -->
             <li v-if="!isAdmin" class="nav-item" role="presentation">
+              <!-- Ongoing regular break: show Molayı Bitir -->
               <button
-                v-if="ongoingBreaks"
+                v-if="ongoingBreaks && ongoingBreakType !== 'EndOfShift'"
                 class="btn btn-sm btn-success align-self-center me-2"
                 @click="endCurrentBreak"
               >
                 <KTIcon icon-name="timer" icon-class="fs-3 text-white me-2" />
                 {{ $t("breaks_end") }}
               </button>
-              <template v-else>
-                <button
-                  class="btn btn-sm btn-danger align-self-center me-2"
-                  @click="startNewBreak"
-                >
-                  <KTIcon icon-name="watch" icon-class="fs-3 text-white me-2" />
-                  {{ $t("breaks_newBreak") }}
-                </button>
-                <button
-                  class="btn btn-sm btn-warning align-self-center"
-                  @click="handleEndShift"
-                >
-                  <KTIcon icon-name="exit-right" icon-class="fs-3 text-white me-2" />
-                  {{ $t("endShift") }}
-                </button>
-              </template>
-            </li>
-            <!-- Admin: Force end break button -->
-            <li v-if="isAdmin && ongoingBreaks && selectedOperator" class="nav-item" role="presentation">
+              <!-- Ongoing EndOfShift: show Mesai'ye Başla -->
               <button
+                v-if="ongoingBreaks && ongoingBreakType === 'EndOfShift'"
+                class="btn btn-sm btn-info align-self-center me-2"
+                @click="handleStartShift"
+              >
+                <KTIcon icon-name="entrance-left" icon-class="fs-3 text-white me-2" />
+                {{ $t("startShift") }}
+              </button>
+              <!-- No ongoing break: show Yeni Mola -->
+              <button
+                v-if="!ongoingBreaks"
+                class="btn btn-sm btn-danger align-self-center me-2"
+                @click="startNewBreak"
+              >
+                <KTIcon icon-name="watch" icon-class="fs-3 text-white me-2" />
+                {{ $t("breaks_newBreak") }}
+              </button>
+              <!-- Mesai Bitir: always visible (except when shift already ended) -->
+              <button
+                v-if="ongoingBreakType !== 'EndOfShift'"
+                class="btn btn-sm btn-warning align-self-center"
+                @click="handleEndShift"
+              >
+                <KTIcon icon-name="exit-right" icon-class="fs-3 text-white me-2" />
+                {{ $t("endShift") }}
+              </button>
+            </li>
+            <!-- Admin: Buttons based on ongoing break type -->
+            <li v-if="isAdmin && ongoingBreaks && selectedOperator" class="nav-item" role="presentation">
+              <!-- Ongoing EndOfShift: show Mesai'ye Başla -->
+              <button
+                v-if="ongoingBreakType === 'EndOfShift'"
+                class="btn btn-sm btn-info align-self-center me-2"
+                @click="adminForceEnd"
+              >
+                <KTIcon icon-name="entrance-left" icon-class="fs-3 text-white me-2" />
+                {{ $t("startShift") }}
+              </button>
+              <!-- Ongoing regular break: show Molayı Zorla Bitir -->
+              <button
+                v-else
                 class="btn btn-sm btn-danger align-self-center me-2"
                 @click="adminForceEnd"
               >
@@ -125,9 +148,13 @@
             </select>
           </div>
           <div v-if="selectedOperator && ongoingBreaks" class="col-md-6 mt-3 mt-md-0">
-            <div class="alert alert-warning d-flex align-items-center mb-0 py-3">
-              <KTIcon icon-name="information-3" icon-class="fs-2 text-warning me-3" />
-              <span>{{ $t("operatorHasOngoingBreak") }}</span>
+            <div
+              :class="ongoingBreakType === 'EndOfShift'
+                ? 'alert alert-info d-flex align-items-center mb-0 py-3'
+                : 'alert alert-warning d-flex align-items-center mb-0 py-3'"
+            >
+              <KTIcon icon-name="information-3" icon-class="fs-2 me-3" />
+              <span>{{ ongoingBreakType === 'EndOfShift' ? $t("operatorShiftEnded") : $t("operatorHasOngoingBreak") }}</span>
             </div>
           </div>
         </div>
@@ -157,6 +184,7 @@
               v-for="breakItem in breaks"
               :key="breakItem.id"
               :breakItem="breakItem"
+              :isAdmin="isAdmin"
               @breakEnded="fetchBreaksAndUpdateStatus"
             />
           </div>
@@ -258,7 +286,7 @@ import { useUserStatisticsStore } from "@/stores/userStatistics";
 import { useOperatorStore } from "@/stores/operator";
 import { useAuthStore } from "@/stores/auth";
 import { Modal } from "bootstrap";
-import { ElMessage } from "element-plus";
+import { ElMessage, ElMessageBox } from "element-plus";
 import i18n from "@/core/plugins/i18n";
 
 export default defineComponent({
@@ -280,6 +308,7 @@ export default defineComponent({
     const ongoingBreaks = ref(false);
     const ongoingBreakId = ref<string | null>(null);
     const ongoingBreakUserId = ref<string | null>(null);
+    const ongoingBreakType = ref<string | null>(null);
     const breakReason = ref("");
     const breakReasonError = ref("");
     const plannedEndTimeLocal = ref("");
@@ -324,7 +353,14 @@ export default defineComponent({
     const startDate = ref(start);
     const endDate = ref(end);
 
-    // --- Central: ongoing break check ---
+    const resetOngoingState = () => {
+      ongoingBreaks.value = false;
+      ongoingBreakId.value = null;
+      ongoingBreakUserId.value = null;
+      ongoingBreakType.value = null;
+    };
+
+    // --- Ongoing break check (tracks break type) ---
     const checkOngoingBreak = async () => {
       if (isAdmin.value) {
         if (!selectedOperator.value) return;
@@ -333,19 +369,18 @@ export default defineComponent({
           ongoingBreaks.value = true;
           ongoingBreakId.value = ongoing.id;
           ongoingBreakUserId.value = ongoing.userId || null;
+          ongoingBreakType.value = ongoing.breakType || null;
         } else {
-          ongoingBreaks.value = false;
-          ongoingBreakId.value = null;
-          ongoingBreakUserId.value = null;
+          resetOngoingState();
         }
       } else {
         const ongoing = await breaksTimeStore.fetchOngoingBreak();
         if (ongoing) {
           ongoingBreaks.value = true;
           ongoingBreakId.value = ongoing.id;
+          ongoingBreakType.value = ongoing.breakType || null;
         } else {
-          ongoingBreaks.value = false;
-          ongoingBreakId.value = null;
+          resetOngoingState();
         }
       }
     };
@@ -435,14 +470,19 @@ export default defineComponent({
       return result;
     };
 
-    // --- Admin: force end break ---
+    // --- Admin: force end break / start shift ---
     const adminForceEnd = async () => {
       if (!ongoingBreakUserId.value && !ongoingBreakId.value) return;
+      const isShiftEnd = ongoingBreakType.value === "EndOfShift";
       try {
         await userStatisticsStore.adminForceEndBreak(
           ongoingBreakUserId.value || ongoingBreakId.value!,
         );
-        ElMessage.success(i18n.global.t("breakForceEnded"));
+        ElMessage.success(
+          isShiftEnd
+            ? i18n.global.t("shiftStartedSuccess")
+            : i18n.global.t("breakForceEnded"),
+        );
         await fetchBreaksAndUpdateStatus();
       } catch {
         ElMessage.error(i18n.global.t("breakForceEndError"));
@@ -452,11 +492,61 @@ export default defineComponent({
     // --- Admin: operator change ---
     const onOperatorChange = () => {
       breaks.value = [];
-      ongoingBreaks.value = false;
-      ongoingBreakId.value = null;
-      ongoingBreakUserId.value = null;
+      resetOngoingState();
       if (selectedOperator.value) {
         fetchBreaksAndUpdateStatus();
+      }
+    };
+
+    // --- Central: Start shift (cancel EndOfShift) ---
+    const handleStartShift = async () => {
+      if (!ongoingBreakId.value) return;
+      try {
+        await breaksTimeStore.endBreak(ongoingBreakId.value);
+        ElMessage.success(i18n.global.t("shiftStartedSuccess"));
+        await fetchBreaksAndUpdateStatus();
+      } catch {
+        ElMessage.error(i18n.global.t("shiftStartError"));
+      }
+    };
+
+    // --- Central: End shift (with confirmation if break active) ---
+    const handleEndShift = async () => {
+      // If there's an ongoing regular break, show confirmation
+      if (ongoingBreaks.value && ongoingBreakType.value !== "EndOfShift") {
+        try {
+          await ElMessageBox.confirm(
+            i18n.global.t("endShiftWithBreakConfirmation"),
+            i18n.global.t("endShift"),
+            {
+              confirmButtonText: i18n.global.t("continue"),
+              cancelButtonText: i18n.global.t("cancel"),
+              type: "warning",
+            },
+          );
+          // User confirmed: end break first, then end shift
+          await breaksTimeStore.endBreak(ongoingBreakId.value!);
+          await breaksTimeStore.endShift();
+          await fetchBreaksAndUpdateStatus();
+        } catch (action) {
+          // User cancelled — do nothing
+          if (action === "cancel") return;
+        }
+        return;
+      }
+
+      // No ongoing break — just end shift
+      try {
+        await breaksTimeStore.endShift();
+        await fetchBreaksAndUpdateStatus();
+      } catch (error: any) {
+        if (error?.status === 400) {
+          ElMessage.error(
+            i18n.global.t("breaks_ongoingBreakError") ||
+              "Zaten açık bir molanız var. Lütfen önce mevcut molayı kapatın.",
+          );
+          await checkOngoingBreak();
+        }
       }
     };
 
@@ -533,27 +623,12 @@ export default defineComponent({
       const breakId =
         ongoingBreakId.value ||
         breaks.value.find(
-          (breakItem) => !breakItem.isEnd && (breakItem.type === "breakStart" || breakItem.type === "shiftEnd"),
+          (breakItem) => !breakItem.isEnd && breakItem.type === "breakStart",
         )?.id;
       if (!breakId) return;
 
       await breaksTimeStore.endBreak(breakId);
       await fetchBreaksAndUpdateStatus();
-    };
-
-    const handleEndShift = async () => {
-      try {
-        await breaksTimeStore.endShift();
-        await fetchBreaksAndUpdateStatus();
-      } catch (error: any) {
-        if (error?.status === 400) {
-          ElMessage.error(
-            i18n.global.t("breaks_ongoingBreakError") ||
-              "Zaten açık bir molanız var. Lütfen önce mevcut molayı kapatın.",
-          );
-          await checkOngoingBreak();
-        }
-      }
     };
 
     const setDateRange = (range: DateRange) => {
@@ -577,11 +652,13 @@ export default defineComponent({
       getAssetPath,
       breaks,
       ongoingBreaks,
+      ongoingBreakType,
       isAdmin,
       operators,
       selectedOperator,
       onOperatorChange,
       adminForceEnd,
+      handleStartShift,
       startNewBreak,
       endCurrentBreak,
       handleEndShift,

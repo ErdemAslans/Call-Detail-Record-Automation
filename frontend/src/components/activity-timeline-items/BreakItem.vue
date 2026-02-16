@@ -72,15 +72,27 @@
             </div>
             <!--end::Content-->
 
-            <!--begin::Action-->
-            <button
-              v-if="!breakItem.isEnd && breakItem.type !== 'shiftEnd'"
-              class="btn btn-success px-6 align-self-center text-nowrap"
-              @click="handleEndBreak"
-            >
-              <KTIcon icon-name="timer" icon-class="fs-3 text-white me-2" />
-              {{ $t("breaks_end") }}
-            </button>
+            <!--begin::Action (Central only) -->
+            <template v-if="!isAdmin && !breakItem.isEnd">
+              <!-- Regular break: Molayı Bitir -->
+              <button
+                v-if="breakItem.type !== 'shiftEnd'"
+                class="btn btn-success px-6 align-self-center text-nowrap"
+                @click="handleEndBreak"
+              >
+                <KTIcon icon-name="timer" icon-class="fs-3 text-white me-2" />
+                {{ $t("breaks_end") }}
+              </button>
+              <!-- EndOfShift: Mesai'ye Başla -->
+              <button
+                v-else
+                class="btn btn-info px-6 align-self-center text-nowrap"
+                @click="handleEndBreak"
+              >
+                <KTIcon icon-name="entrance-left" icon-class="fs-3 text-white me-2" />
+                {{ $t("startShift") }}
+              </button>
+            </template>
             <!--end::Action-->
           </div>
           <!--end::Wrapper-->
@@ -105,6 +117,10 @@ export default defineComponent({
     breakItem: {
       type: Object as () => FormatedBreakTimesItems,
       required: true,
+    },
+    isAdmin: {
+      type: Boolean,
+      default: false,
     },
   },
   emits: ["breakEnded"],
