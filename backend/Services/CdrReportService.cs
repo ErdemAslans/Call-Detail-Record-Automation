@@ -422,6 +422,28 @@ public class CdrReportService : ICdrReportService
 
             var userReport = await _cdrRecordsService.GetUserCalls(filter);
 
+            // Populate MetricsSummary from operator's call statistics for email body
+            var workStats = userReport.WorkHoursStatistics ?? new CallStatistics();
+            var nonWorkStats = userReport.NonWorkHoursStatistics ?? new CallStatistics();
+
+            result.MetricsSummary.TotalIncomingCalls = workStats.IncomingCalls + nonWorkStats.IncomingCalls;
+            result.MetricsSummary.TotalAnsweredCalls = workStats.AnsweredCalls + nonWorkStats.AnsweredCalls;
+            result.MetricsSummary.TotalMissedCalls = workStats.MissedCalls + nonWorkStats.MissedCalls;
+            result.MetricsSummary.TotalOnBreakCalls = workStats.OnBreakCalls + nonWorkStats.OnBreakCalls;
+            result.MetricsSummary.TotalRedirectedCalls = workStats.RedirectedCalls + nonWorkStats.RedirectedCalls;
+            result.MetricsSummary.TotalOutgoingCalls = workStats.OutgoingCalls + nonWorkStats.OutgoingCalls;
+            result.MetricsSummary.WorkHoursCalls = workStats.TotalCalls;
+            result.MetricsSummary.AfterHoursCalls = nonWorkStats.TotalCalls;
+
+            var effectiveIncoming = result.MetricsSummary.TotalIncomingCalls
+                - result.MetricsSummary.TotalRedirectedCalls
+                - result.MetricsSummary.TotalOnBreakCalls;
+            if (effectiveIncoming > 0)
+            {
+                result.MetricsSummary.AnswerRate = Math.Round(
+                    (double)result.MetricsSummary.TotalAnsweredCalls / effectiveIncoming * 100, 2);
+            }
+
             // Create report result from user calls
             result.ExcelData = userReport.ToExcelFile();
             result.FileSizeBytes = result.ExcelData.Length;
