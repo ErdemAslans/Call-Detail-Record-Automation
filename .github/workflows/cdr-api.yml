@@ -83,7 +83,7 @@ jobs:
         continue-on-error: true
 
       - name: "\U0001F528 Publish"
-        run: dotnet publish -c Release -o C:\Projects\Cdr.Api\publish --self-contained false
+        run: dotnet publish Cdr.Api.csproj -c Release -o C:\Projects\Cdr.Api\publish --self-contained false
         shell: powershell
 
       - name: "\U0001F680 Bring App Online & Start IIS"
