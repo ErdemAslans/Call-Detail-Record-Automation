@@ -52,7 +52,7 @@
       <!--end::Timeline heading-->
 
       <!--begin::Timeline details-->
-      <div v-if="breakItem.type !== 'breakEnd'" class="overflow-auto pb-5">
+      <div v-if="breakItem.type !== 'breakEnd' && breakItem.type !== 'shiftStart'" class="overflow-auto pb-5">
         <div
           :class="breakItem.type === 'shiftEnd'
             ? 'notice d-flex bg-light-warning rounded border-warning border border-dashed min-w-lg-600px flex-shrink-0 p-6'
@@ -138,18 +138,21 @@ export default defineComponent({
 
     const itemIcon = computed(() => {
       if (props.breakItem.type === "shiftEnd") return "exit-right";
+      if (props.breakItem.type === "shiftStart") return "entrance-left";
       if (props.breakItem.type === "breakStart") return "timer";
       return "watch";
     });
 
     const itemColorClass = computed(() => {
       if (props.breakItem.type === "shiftEnd") return "text-warning";
+      if (props.breakItem.type === "shiftStart") return "text-info";
       if (props.breakItem.type === "breakStart") return "text-danger";
       return "text-success";
     });
 
     const itemLabel = computed(() => {
       if (props.breakItem.type === "shiftEnd") return "shiftEnd";
+      if (props.breakItem.type === "shiftStart") return "shiftStart";
       return props.breakItem.type;
     });
 

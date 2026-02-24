@@ -200,7 +200,7 @@ export default defineComponent({
           });
         }
 
-        if (item.endTime && item.breakType !== "EndOfShift") {
+        if (item.endTime) {
           const breakEndDate = new Date(item.endTime).toLocaleDateString();
           if (breakEndDate !== lastDate) {
             result.push({ breakTime: item.endTime, type: "date" });
@@ -208,7 +208,7 @@ export default defineComponent({
           }
           result.push({
             breakTime: item.endTime,
-            type: "breakEnd",
+            type: item.breakType === "EndOfShift" ? "shiftStart" : "breakEnd",
             reason: item.reason,
           });
         }

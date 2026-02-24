@@ -124,7 +124,7 @@ export const useBreaksStore = defineStore("breaks", () => {
         }
       }
 
-      if (item.endTime && item.breakType !== "EndOfShift") {
+      if (item.endTime) {
         const breakEndDate = new Date(item.endTime).toLocaleDateString();
 
         // Initialize array for this date if not exists
@@ -132,11 +132,11 @@ export const useBreaksStore = defineStore("breaks", () => {
           breaksByDate.set(breakEndDate, []);
         }
 
-        // Add break end item
+        // Add break end or shift start item
         breaksByDate.get(breakEndDate)!.push({
           id: item.id,
           breakTime: item.endTime,
-          type: "breakEnd",
+          type: item.breakType === "EndOfShift" ? "shiftStart" : "breakEnd",
           isEnd: true,
         });
       }
