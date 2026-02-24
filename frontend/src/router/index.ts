@@ -9,7 +9,6 @@ import { useConfigStore } from "@/stores/config";
 const routes: Array<RouteRecordRaw> = [
   {
     path: "/",
-    redirect: "/dashboard",
     component: () => import("@/layouts/default-layout/DefaultLayout.vue"),
     meta: {
       middleware: "auth",
@@ -196,6 +195,14 @@ router.beforeEach((to, from, next) => {
     // If not authenticated, redirect to the sign-in page
     if (!authStore.isAuthenticated) {
       return next({ name: "sign-in", query: { returnUrl: to.fullPath } });
+    }
+
+    // Redirect root path based on user role
+    if (to.path === "/") {
+      if (authStore.user.roles.includes("Admin")) {
+        return next({ path: "/dashboard" });
+      }
+      return next({ path: "/breaks" });
     }
 
     // Check if the route requires specific roles
