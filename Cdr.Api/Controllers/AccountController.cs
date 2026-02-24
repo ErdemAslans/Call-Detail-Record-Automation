@@ -50,6 +50,20 @@ public class AccountController : ControllerBase
         return Ok(new { user.Id, user.UserName, user.Email, Roles = roles });
     }
 
+    [HttpPost("assign-role")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> AssignRole([FromBody] AssignRoleModel model)
+    {
+        var user = await _userManager.FindByEmailAsync(model.Email);
+        if (user == null) return NotFound("User not found");
+
+        var result = await _userManager.AddToRoleAsync(user, model.Role);
+        if (!result.Succeeded) return BadRequest(result.Errors);
+
+        var roles = await _userManager.GetRolesAsync(user);
+        return Ok(new { user.Id, user.UserName, user.Email, Roles = roles });
+    }
+
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginModel model)
     {
