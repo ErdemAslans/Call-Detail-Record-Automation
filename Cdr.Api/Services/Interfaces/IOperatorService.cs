@@ -62,4 +62,14 @@ public interface IOperatorService
     /// Force-ends any ongoing break for a given user (Admin only)
     /// </summary>
     Task<(bool Success, BreakResponseModel? BreakInfo, string? Message)> ForceEndBreakAsync(string userId);
+
+    /// <summary>
+    /// Records the end of an operator's shift (Mesai Bitir)
+    /// </summary>
+    Task<(bool Success, BreakResponseModel? BreakInfo, string? Message)> EndShiftAsync(string username, string? reason);
+
+    /// <summary>
+    /// Automatically ends shifts for all operators (Hangfire job at 16:45)
+    /// </summary>
+    Task AutoEndAllShiftsAsync();
 }

@@ -491,6 +491,11 @@ const messages = {
     shiftStartError: "Failed to start shift",
     endShiftWithBreakConfirmation: "Your ongoing break will be closed and your shift will be ended. Do you want to continue?",
     operatorShiftEnded: "This operator's shift has ended",
+    // Shift Lock Overlay
+    shiftLock_title: "Your Shift Has Ended",
+    shiftLock_subtitle: "To continue working, please start your shift.",
+    shiftLock_endedAt: "Shift ended at:",
+    shiftLock_startShift: "Start Shift",
   },
   tr: {
     dashboard: "Gösterge Paneli",
@@ -1005,6 +1010,11 @@ const messages = {
     shiftStartError: "Mesai başlatılırken hata oluştu",
     endShiftWithBreakConfirmation: "Devam eden molanız kapatılıp mesainiz bitirilecektir. Devam etmek istiyor musunuz?",
     operatorShiftEnded: "Bu operatörün mesaisi bitmiş durumda",
+    // Mesai Kilit Ekranı
+    shiftLock_title: "Mesainiz Sona Erdi",
+    shiftLock_subtitle: "Çalışmaya devam etmek için mesainizi başlatın.",
+    shiftLock_endedAt: "Mesai bitiş saati:",
+    shiftLock_startShift: "Mesaiyi Başlat",
   },
 };
 

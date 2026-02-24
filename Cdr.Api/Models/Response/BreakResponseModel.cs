@@ -8,5 +8,6 @@ namespace Cdr.Api.Models.Response;
         public DateTime? EndTime { get; set; }
         public DateTime PlannedEndTime { get; set; }
         public string? Reason { get; set; }
+        public string BreakType { get; set; } = "Break";
     }
 

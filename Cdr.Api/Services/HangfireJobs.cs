@@ -89,6 +89,18 @@ namespace Cdr.Api.Services
                     TimeZone = TurkeyTimeZone,
                     MisfireHandling = MisfireHandlingMode.Relaxed
                 });
+
+            // Auto End-of-Shift - Every weekday at 16:45 Turkey Time
+            RecurringJob.AddOrUpdate<IOperatorService>(
+                "AutoEndAllShifts",
+                "default",
+                x => x.AutoEndAllShiftsAsync(),
+                "45 16 * * 1-5", // Weekdays at 16:45
+                new RecurringJobOptions
+                {
+                    TimeZone = TurkeyTimeZone,
+                    MisfireHandling = MisfireHandlingMode.Relaxed
+                });
         }
     }
 

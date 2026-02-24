@@ -30,6 +30,7 @@
   <!-- <KTDrawers /> -->
   <KTScrollTop />
   <KTModals />
+  <ShiftLockOverlay />
   <!-- <KTCustomize /> -->
 </template>
 
@@ -49,6 +50,7 @@ import KTFooter from "@/layouts/default-layout/components/footer/Footer.vue";
 // import KTDrawers from "@/layouts/default-layout/components/drawers/Drawers.vue";
 import KTModals from "@/layouts/default-layout/components/modals/Modals.vue";
 import KTScrollTop from "@/layouts/default-layout/components/extras/ScrollTop.vue";
+import ShiftLockOverlay from "@/components/shift/ShiftLockOverlay.vue";
 // import KTCustomize from "@/layouts/default-layout/components/extras/Customize.vue";
 import { useRoute } from "vue-router";
 import { reinitializeComponents } from "@/core/plugins/keenthemes";
@@ -65,6 +67,7 @@ export default defineComponent({
     // KTDrawers,
     KTScrollTop,
     KTModals,
+    ShiftLockOverlay,
     // KTCustomize,
   },
   setup() {

@@ -16,6 +16,8 @@ namespace Cdr.Api.Interfaces
 
         Task<bool> HasOngoingBreakAsync(string userId);
 
+        Task<bool> HasOngoingShiftEndAsync(string userId);
+
         Task<bool> IsBreakEndedAsync(ObjectId breakId);
 
         Task<List<Break>> GetBreaksByUserIdAsync(string userId);

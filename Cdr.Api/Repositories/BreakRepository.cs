@@ -39,7 +39,18 @@ namespace Cdr.Api.Repositories
         {
             var filter = Builders<Break>.Filter.And(
                 Builders<Break>.Filter.Eq(b => b.UserId, userId),
-                Builders<Break>.Filter.Eq(b => b.EndTime, null)
+                Builders<Break>.Filter.Eq(b => b.EndTime, null),
+                Builders<Break>.Filter.Ne(b => b.BreakType, "EndOfShift")
+            );
+            return await _collection.Find(filter).AnyAsync();
+        }
+
+        public async Task<bool> HasOngoingShiftEndAsync(string userId)
+        {
+            var filter = Builders<Break>.Filter.And(
+                Builders<Break>.Filter.Eq(b => b.UserId, userId),
+                Builders<Break>.Filter.Eq(b => b.EndTime, null),
+                Builders<Break>.Filter.Eq(b => b.BreakType, "EndOfShift")
             );
             return await _collection.Find(filter).AnyAsync();
         }
