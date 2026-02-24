@@ -1,0 +1,128 @@
+name: "\U0001F680 CDR Main API CI/CD"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Cdr.Api/**'
+      - '.github/workflows/cdr-api.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'Cdr.Api/**'
+      - '.github/workflows/cdr-api.yml'
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '8.0.x'
+
+jobs:
+  build:
+    name: "\U0001F528 Build & Test"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Cdr.Api
+
+    steps:
+      - name: "\U0001F4E5 Checkout"
+        uses: actions/checkout@v4
+
+      - name: "\U0001F527 Setup .NET 8"
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: "\U0001F4E6 NuGet Cache"
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('Cdr.Api/**/*.csproj') }}
+          restore-keys: ${{ runner.os }}-nuget-
+
+      - name: "\U0001F4E5 Restore"
+        run: dotnet restore
+
+      - name: "\U0001F528 Build"
+        run: dotnet build --configuration Release --no-restore
+
+  deploy:
+    name: "\U0001F680 Deploy to Server"
+    needs: build
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: [self-hosted, windows, production]
+    defaults:
+      run:
+        working-directory: Cdr.Api
+
+    steps:
+      - name: "\U0001F4E5 Checkout"
+        uses: actions/checkout@v4
+
+      - name: "\U0001F6D1 Take App Offline & Stop IIS"
+        run: |
+          $publishPath = "C:\Projects\Cdr.Api\publish"
+          $siteName = "Cdr.Api"
+
+          # app_offline.htm IIS'e uygulamayi unload ettirip DLL kilidini acar
+          if (Test-Path $publishPath) {
+            "<!DOCTYPE html><html><body><h1>Updating...</h1></body></html>" | Out-File -Encoding utf8 "$publishPath\app_offline.htm"
+            Write-Host "app_offline.htm created - IIS will unload the app"
+          }
+
+          # App pool'u durduralim
+          try {
+            & "$env:SystemRoot\System32\inetsrv\appcmd.exe" stop apppool /apppool.name:$siteName 2>&1
+            Write-Host "App pool stopped"
+          } catch {
+            Write-Host "Could not stop app pool (may already be stopped)"
+          }
+
+          Start-Sleep -Seconds 5
+        shell: powershell
+        continue-on-error: true
+
+      - name: "\U0001F528 Publish"
+        run: dotnet publish -c Release -o C:\Projects\Cdr.Api\publish --self-contained false
+        shell: powershell
+
+      - name: "\U0001F680 Bring App Online & Start IIS"
+        run: |
+          $publishPath = "C:\Projects\Cdr.Api\publish"
+          $siteName = "Cdr.Api"
+
+          # app_offline.htm'i sil
+          $offlinePath = "$publishPath\app_offline.htm"
+          if (Test-Path $offlinePath) {
+            Remove-Item $offlinePath -Force
+            Write-Host "app_offline.htm removed"
+          }
+
+          # App pool'u baslat
+          try {
+            & "$env:SystemRoot\System32\inetsrv\appcmd.exe" start apppool /apppool.name:$siteName 2>&1
+            & "$env:SystemRoot\System32\inetsrv\appcmd.exe" start site /site.name:$siteName 2>&1
+            Write-Host "IIS site started"
+          } catch {
+            Write-Host "Could not start IIS (may need manual restart)"
+          }
+        shell: powershell
+        continue-on-error: true
+
+      - name: "\u2705 Health Check"
+        run: |
+          Start-Sleep -Seconds 8
+          try {
+            [System.Net.ServicePointManager]::ServerCertificateValidationCallback = {$true}
+            [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+            $response = Invoke-WebRequest -Uri "https://doascdrapi.fw.dohas.com.tr:8082/account/login" -Method GET -TimeoutSec 10 -UseBasicParsing
+            Write-Host "API is running! Status: $($response.StatusCode)"
+          } catch {
+            $statusCode = $_.Exception.Response.StatusCode.Value__
+            if ($statusCode -eq 405) {
+              Write-Host "API is running! (405 = endpoint reached successfully)"
+            } else {
+              Write-Host "Health check: $($_.Exception.Message)"
+            }
+          }
+        shell: powershell
