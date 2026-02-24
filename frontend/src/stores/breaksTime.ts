@@ -124,7 +124,7 @@ export const useBreaksStore = defineStore("breaks", () => {
         }
       }
 
-      if (item.endTime) {
+      if (item.endTime && item.breakType !== "EndOfShift") {
         const breakEndDate = new Date(item.endTime).toLocaleDateString();
 
         // Initialize array for this date if not exists
