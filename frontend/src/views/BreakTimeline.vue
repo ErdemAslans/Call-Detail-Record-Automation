@@ -627,8 +627,13 @@ export default defineComponent({
         )?.id;
       if (!breakId) return;
 
-      await breaksTimeStore.endBreak(breakId);
-      await fetchBreaksAndUpdateStatus();
+      try {
+        await breaksTimeStore.endBreak(breakId);
+        await fetchBreaksAndUpdateStatus();
+      } catch {
+        ElMessage.error(i18n.global.t("breakEndError") || "Mola bitirilemedi.");
+        await fetchBreaksAndUpdateStatus();
+      }
     };
 
     const setDateRange = (range: DateRange) => {

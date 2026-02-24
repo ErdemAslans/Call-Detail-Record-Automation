@@ -29,7 +29,8 @@ export const useBreaksStore = defineStore("breaks", () => {
         return formatBreakTimes(data);
       })
       .catch(({ response }) => {
-        return response.data.errors;
+        console.error("fetchBreaks error:", response?.data?.errors || response);
+        return [] as FormatedBreakTimesItems[];
       });
   }
 
@@ -39,7 +40,8 @@ export const useBreaksStore = defineStore("breaks", () => {
       .then(({ data }) => {
         return data;
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error("fetchOngoingBreak error:", err?.response?.data || err);
         return null;
       });
   }
