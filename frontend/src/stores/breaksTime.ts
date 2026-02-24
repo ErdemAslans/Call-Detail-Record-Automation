@@ -20,13 +20,17 @@ export const useBreaksStore = defineStore("breaks", () => {
       .join("&");
 
     const url = `${apiUrlConstants.BREAKS}?${queryString}`;
+    console.log("[fetchBreaks] params:", params, "url:", url);
     return ApiService.get(url)
       .then(({ data }) => {
+        console.log("[fetchBreaks] API response data:", JSON.stringify(data).substring(0, 500), "count:", Array.isArray(data) ? data.length : "not-array");
         ResponseMessageService.showMessageByType(
           "breaks_fetchBreaks",
           "success",
         );
-        return formatBreakTimes(data);
+        const formatted = formatBreakTimes(data);
+        console.log("[fetchBreaks] formatted result count:", formatted.length);
+        return formatted;
       })
       .catch(({ response }) => {
         console.error("fetchBreaks error:", response?.data?.errors || response);
