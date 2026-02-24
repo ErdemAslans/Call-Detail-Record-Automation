@@ -119,12 +119,21 @@ public class OperatorController : ControllerBase
 
     [HttpGet("user-break-times")]
     [Authorize(Roles = "Central")]
-    // TODO: Range keyword u alacak şekilde güncelle. Veri aktarımı yaptıktan sonra
     public async Task<IActionResult> GetUserBreakTimes([FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
     {
-        var username = User.FindFirst(ClaimTypes.Name)?.Value;
-        var breakTimes = await _operatorService.GetUserBreakTimesAsync(username, startDate, endDate);
-        return Ok(breakTimes);
+        try
+        {
+            var username = User.FindFirst(ClaimTypes.Name)?.Value;
+            _logger.LogInformation("GetUserBreakTimes called - username: {Username}, startDate: {StartDate}, endDate: {EndDate}", username, startDate, endDate);
+            var breakTimes = await _operatorService.GetUserBreakTimesAsync(username, startDate, endDate);
+            _logger.LogInformation("GetUserBreakTimes result - username: {Username}, count: {Count}", username, breakTimes?.Count ?? 0);
+            return Ok(breakTimes);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in GetUserBreakTimes");
+            return Ok(new List<object>());
+        }
     }
 
     [HttpGet("ongoing-break")]

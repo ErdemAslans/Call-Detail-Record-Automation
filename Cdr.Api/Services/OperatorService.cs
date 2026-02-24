@@ -97,13 +97,25 @@ namespace Cdr.Api.Services
         public async Task<List<BreakResponseModel>> GetUserBreakTimesAsync(string username, DateTime startDate, DateTime endDate)
         {
             var user = await _operatorRepository.GetUserByUsernameAsync(username);
+            if (user == null)
+            {
+                _logger.LogWarning("GetUserBreakTimesAsync: Operator not found for username {Username}", username);
+                return new List<BreakResponseModel>();
+            }
+            _logger.LogInformation("GetUserBreakTimesAsync: Found operator {OperatorId} for username {Username}", user.Id, username);
             var breaks = await _breakRepository.GetBreaksByUserIdAndDateRangeAsync(user.Id, startDate, endDate);
+            _logger.LogInformation("GetUserBreakTimesAsync: Found {Count} breaks for operator {OperatorId}", breaks.Count, user.Id);
             return _mapper.Map<List<BreakResponseModel>>(breaks);
         }
 
         public async Task<BreakResponseModel?> GetOngoingBreakAsync(string username)
         {
             var user = await _operatorRepository.GetUserByUsernameAsync(username);
+            if (user == null)
+            {
+                _logger.LogWarning("GetOngoingBreakAsync: Operator not found for username {Username}", username);
+                return null;
+            }
             var ongoingBreak = await _breakRepository.GetOngoingBreakAsync(user.Id);
             return ongoingBreak != null ? _mapper.Map<BreakResponseModel>(ongoingBreak) : null;
         }
