@@ -118,12 +118,10 @@ export default defineComponent({
       try {
         await breaksStore.endBreak(ongoingBreakId.value);
         ElMessage.success(i18n.global.t("shiftStartedSuccess"));
-        isLocked.value = false;
-        ongoingBreakId.value = null;
-        shiftEndTime.value = null;
+        // Reload page to refresh all state (breaks, timeline, etc.)
+        window.location.reload();
       } catch {
         ElMessage.error(i18n.global.t("shiftStartError"));
-      } finally {
         isStarting.value = false;
       }
     };

@@ -65,7 +65,7 @@ export const useBreaksStore = defineStore("breaks", () => {
         ResponseMessageService.showMessageByType("breaks_endBreak", "success");
       })
       .catch(({ response }) => {
-        return response.data.errors;
+        throw response?.data?.errors || response;
       });
   }
 
