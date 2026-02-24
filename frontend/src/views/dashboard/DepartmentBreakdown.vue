@@ -120,10 +120,9 @@
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, onMounted, ref, watch } from "vue";
+import { computed, defineComponent, ref, watch } from "vue";
 import { useDashboardStore } from "@/stores/dashboard";
 import { useI18n } from "vue-i18n";
-import DateHelper from "@/core/helpers/DateHelper";
 
 interface DepartmentStat {
   departmentName: string;
@@ -138,8 +137,12 @@ export default defineComponent({
   name: "department-breakdown",
   props: {
     widgetClasses: String,
+    selectedDate: {
+      type: String,
+      default: "",
+    },
   },
-  setup() {
+  setup(props) {
     const dashboardStore = useDashboardStore();
     const { t, te } = useI18n();
     const translate = (text: string) => (te(text) ? t(text) : text);
@@ -149,11 +152,39 @@ export default defineComponent({
     const isLoading = ref(false);
     const isExporting = ref(false);
 
-    const dateRange = computed(() => DateHelper.getDateRange(selectedPeriod.value));
+    const getDateRangeForDate = (
+      baseDate: string,
+      period: "today" | "week" | "month"
+    ): { start: string; end: string } => {
+      const d = new Date(baseDate + "T12:00:00");
+      const fmt = (dt: Date) =>
+        dt.toLocaleDateString("en-CA", { timeZone: "Europe/Istanbul" });
+
+      if (period === "today") {
+        return { start: fmt(d), end: fmt(d) };
+      }
+      if (period === "week") {
+        const day = d.getDay();
+        const weekStart = new Date(d);
+        weekStart.setDate(d.getDate() - day);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+        return { start: fmt(weekStart), end: fmt(weekEnd) };
+      }
+      // month
+      const monthStart = new Date(d.getFullYear(), d.getMonth(), 1);
+      const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+      return { start: fmt(monthStart), end: fmt(monthEnd) };
+    };
+
+    const dateRange = computed(() => {
+      const base = props.selectedDate || new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Istanbul" });
+      return getDateRangeForDate(base, selectedPeriod.value);
+    });
 
     const periodBadge = computed(() => {
-      const start = new Date(dateRange.value.start);
-      const end = new Date(dateRange.value.end);
+      const start = new Date(dateRange.value.start + "T12:00:00");
+      const end = new Date(dateRange.value.end + "T12:00:00");
       const opts: Intl.DateTimeFormatOptions = {
         day: "numeric",
         month: "long",
@@ -209,8 +240,7 @@ export default defineComponent({
       return "bg-danger";
     };
 
-    onMounted(fetchData);
-    watch(selectedPeriod, fetchData);
+    watch([selectedPeriod, () => props.selectedDate], fetchData, { immediate: true });
 
     return {
       departments,

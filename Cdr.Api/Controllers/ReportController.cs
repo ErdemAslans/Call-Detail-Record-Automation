@@ -108,9 +108,9 @@ public class ReportController : ControllerBase
     }
 
     [HttpGet("daily-call-report")]
-    public async Task<IActionResult> GetDailyCallReport()
+    public async Task<IActionResult> GetDailyCallReport([FromQuery] DateTime? date)
     {
-        var records = await _cdrRecordsService.GetDailyCallReportAsync();
+        var records = await _cdrRecordsService.GetDailyCallReportAsync(date);
         return Ok(records);
     }
 

@@ -29,7 +29,7 @@ namespace Cdr.Api.Services.Interfaces
         /// Retrieves the daily call report.
         /// </summary>
         /// <returns>A task that represents the asynchronous operation. The task result contains a <see cref="DailyCallReport"/> with the daily call report data.</returns>
-        Task<DailyCallReport> GetDailyCallReportAsync();
+        Task<DailyCallReport> GetDailyCallReportAsync(DateTime? date = null);
 
         /// <summary>
         /// Retrieves a list of CDR records based on the specified filter.

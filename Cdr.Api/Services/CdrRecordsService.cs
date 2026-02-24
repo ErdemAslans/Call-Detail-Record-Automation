@@ -49,10 +49,10 @@ namespace Cdr.Api.Services
             };
         }
 
-        public async Task<DailyCallReport> GetDailyCallReportAsync()
+        public async Task<DailyCallReport> GetDailyCallReportAsync(DateTime? date = null)
         {
-            // Use Turkey timezone for the daily report
-            return await _cdrRecordsRepository.GetDailyCallReportAsync(date: TurkeyTimeProvider.Today);
+            // Use Turkey timezone for the daily report if no date provided
+            return await _cdrRecordsRepository.GetDailyCallReportAsync(date: date ?? TurkeyTimeProvider.Today);
         }
 
         private async Task<BarChartResponse<double>> GetWeeklyAnsweredCallsAsync(DateTime startDate, DateTime endDate)

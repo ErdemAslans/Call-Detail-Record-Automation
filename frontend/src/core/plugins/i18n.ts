@@ -496,6 +496,10 @@ const messages = {
     shiftLock_subtitle: "To continue working, please start your shift.",
     shiftLock_endedAt: "Shift ended at:",
     shiftLock_startShift: "Start Shift",
+    // Date picker navigation
+    previousDay: "Previous Day",
+    nextDay: "Next Day",
+    selectDate: "Select Date",
   },
   tr: {
     dashboard: "Gösterge Paneli",
@@ -1015,6 +1019,10 @@ const messages = {
     shiftLock_subtitle: "Çalışmaya devam etmek için mesainizi başlatın.",
     shiftLock_endedAt: "Mesai bitiş saati:",
     shiftLock_startShift: "Mesaiyi Başlat",
+    // Tarih seçici navigasyonu
+    previousDay: "Önceki Gün",
+    nextDay: "Sonraki Gün",
+    selectDate: "Tarih Seçin",
   },
 };
 

@@ -40,8 +40,9 @@ export const useDashboardStore = defineStore("dashboard", () => {
       });
   }
 
-  function fetchDailyCallReport() {
-    const url = `${apiUrlConstants.DASHBOARD_DAILY_CALL_REPORT}`;
+  function fetchDailyCallReport(date?: string) {
+    const params = date ? `?date=${encodeURIComponent(date)}` : "";
+    const url = `${apiUrlConstants.DASHBOARD_DAILY_CALL_REPORT}${params}`;
 
     return ApiService.get(url)
       .then(({ data }) => {

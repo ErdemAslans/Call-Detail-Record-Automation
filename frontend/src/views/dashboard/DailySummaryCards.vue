@@ -1,14 +1,5 @@
 <template>
   <div class="row g-5 g-xl-8 mb-5 mb-xl-8">
-    <!--begin::Today Label-->
-    <div class="col-12">
-      <div class="d-flex align-items-center">
-        <h3 class="fw-bold text-gray-800 mb-0 me-3">{{ translate("todaySummary") }}</h3>
-        <span class="badge badge-light-primary fs-7 fw-semibold">{{ todayLabel }}</span>
-      </div>
-    </div>
-    <!--end::Today Label-->
-
     <!--begin::Card Gelen-->
     <div class="col">
       <div class="card card-flush h-100" data-bs-toggle="tooltip" data-bs-placement="bottom" :title="translate('tooltipTotalCalls')">
@@ -84,7 +75,7 @@
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, onMounted, nextTick } from "vue";
+import { computed, defineComponent, nextTick, watch } from "vue";
 import { useDashboardStore } from "@/stores/dashboard";
 import { useI18n } from "vue-i18n";
 import DateHelper from "@/core/helpers/DateHelper";
@@ -92,23 +83,18 @@ import { Tooltip } from "bootstrap";
 
 export default defineComponent({
   name: "daily-summary-cards",
-  setup() {
+  props: {
+    selectedDate: {
+      type: String,
+      default: "",
+    },
+  },
+  setup(props) {
     const dashboardStore = useDashboardStore();
     const { t, te } = useI18n();
     const translate = (text: string) => (te(text) ? t(text) : text);
 
     const dailyReport = computed(() => dashboardStore.dailyCallReport);
-
-    const todayLabel = computed(() => {
-      const now = new Date();
-      return now.toLocaleDateString("tr-TR", {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        timeZone: "Europe/Istanbul",
-      });
-    });
 
     const formattedDuration = computed(() => {
       return DateHelper.formatDuration(dailyReport.value.totalDuration ?? 0);
@@ -121,14 +107,24 @@ export default defineComponent({
       });
     };
 
-    onMounted(() => {
-      dashboardStore.fetchDailyCallReport();
+    const getTodayStr = () => {
+      return new Date().toLocaleDateString("en-CA", {
+        timeZone: "Europe/Istanbul",
+      });
+    };
+
+    const fetchData = () => {
+      const dateParam = props.selectedDate && props.selectedDate !== getTodayStr()
+        ? props.selectedDate
+        : undefined;
+      dashboardStore.fetchDailyCallReport(dateParam);
       initTooltips();
-    });
+    };
+
+    watch(() => props.selectedDate, fetchData, { immediate: true });
 
     return {
       dailyReport,
-      todayLabel,
       formattedDuration,
       translate,
     };
