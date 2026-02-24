@@ -78,28 +78,12 @@ class ApiService {
         `Bearer ${token}`;
       ApiService.vueInstance.axios.defaults.headers.common["Accept"] =
         "application/json";
-      
+
       // Set Accept-Language header based on current locale
       ApiService.vueInstance.axios.defaults.headers.common["Accept-Language"] =
         i18n.global.locale.value || "tr-TR";
-    } else {
-      // Eğer token yoksa, session expired durumu işleyebilirsiniz
-      await this.handleSessionExpired();
     }
-
-    // Token geçerliliği kontrol et ve yenile
-    if (token && JwtService.isTokenExpired(token)) {
-      await this.handleSessionExpired();
-    }
-  }
-
-  /**
-   * @description Handle session expired scenario by clearing the token
-   */
-  private static async handleSessionExpired(): Promise<void> {
-    // Eğer token geçersizse, oturumu kapat
-    JwtService.destroyToken();
-    router.push({ name: "sign-in" });
+    // Token yoksa veya expire olmuşsa backend 401 döner, interceptor yakalar
   }
 
   /**
