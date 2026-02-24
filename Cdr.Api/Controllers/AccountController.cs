@@ -26,6 +26,7 @@ public class AccountController : ControllerBase
     }
 
     [HttpPost("register")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Register([FromBody] RegisterModel model)
     {
         var user = new User
@@ -35,39 +36,18 @@ public class AccountController : ControllerBase
         };
 
         var result = await _userManager.CreateAsync(user, model.Password);
-        if (result.Succeeded)
+        if (!result.Succeeded)
+            return BadRequest(result.Errors);
+
+        if (!string.IsNullOrEmpty(model.Role))
         {
-            return Ok();
+            var roleResult = await _userManager.AddToRoleAsync(user, model.Role);
+            if (!roleResult.Succeeded)
+                return BadRequest(roleResult.Errors);
         }
 
-        return BadRequest(result.Errors);
-    }
-
-    [HttpGet("users")]
-    [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> GetAllUsers()
-    {
-        var users = _userManager.Users.ToList();
-        var result = new List<object>();
-        foreach (var u in users)
-        {
-            var roles = await _userManager.GetRolesAsync(u);
-            result.Add(new { u.Id, u.UserName, u.Email, Roles = roles });
-        }
-        return Ok(result);
-    }
-
-    [HttpPost("reset-password")]
-    [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordModel model)
-    {
-        var user = await _userManager.FindByEmailAsync(model.Email);
-        if (user == null) return NotFound("User not found");
-
-        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-        var result = await _userManager.ResetPasswordAsync(user, token, model.NewPassword);
-        if (result.Succeeded) return Ok("Password reset successfully");
-        return BadRequest(result.Errors);
+        var roles = await _userManager.GetRolesAsync(user);
+        return Ok(new { user.Id, user.UserName, user.Email, Roles = roles });
     }
 
     [HttpPost("login")]
