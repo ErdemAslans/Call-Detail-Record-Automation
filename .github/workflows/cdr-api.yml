@@ -59,26 +59,15 @@ jobs:
       - name: "\U0001F4E5 Checkout"
         uses: actions/checkout@v4
 
-      - name: "\U0001F6D1 Take App Offline & Stop IIS"
+      - name: "\U0001F6D1 Stop IIS"
         run: |
-          $publishPath = "C:\Projects\Cdr.Api\publish"
-          $siteName = "Cdr.Api"
-
-          # app_offline.htm IIS'e uygulamayi unload ettirip DLL kilidini acar
-          if (Test-Path $publishPath) {
-            "<!DOCTYPE html><html><body><h1>Updating...</h1></body></html>" | Out-File -Encoding utf8 "$publishPath\app_offline.htm"
-            Write-Host "app_offline.htm created - IIS will unload the app"
-          }
-
-          # App pool'u durduralim
           try {
-            & "$env:SystemRoot\System32\inetsrv\appcmd.exe" stop apppool /apppool.name:$siteName 2>&1
-            Write-Host "App pool stopped"
+            & iisreset /stop
+            Write-Host "IIS stopped"
           } catch {
-            Write-Host "Could not stop app pool (may already be stopped)"
+            Write-Host "iisreset stop failed: $_"
           }
-
-          Start-Sleep -Seconds 5
+          Start-Sleep -Seconds 3
         shell: powershell
         continue-on-error: true
 
@@ -86,25 +75,20 @@ jobs:
         run: dotnet publish Cdr.Api.csproj -c Release -o C:\Projects\Cdr.Api\publish --self-contained false
         shell: powershell
 
-      - name: "\U0001F680 Bring App Online & Start IIS"
+      - name: "\U0001F680 Start IIS"
         run: |
-          $publishPath = "C:\Projects\Cdr.Api\publish"
-          $siteName = "Cdr.Api"
-
-          # app_offline.htm'i sil
-          $offlinePath = "$publishPath\app_offline.htm"
-          if (Test-Path $offlinePath) {
-            Remove-Item $offlinePath -Force
-            Write-Host "app_offline.htm removed"
+          # Force app pool recycle by touching web.config
+          $webConfig = "C:\Projects\Cdr.Api\publish\web.config"
+          if (Test-Path $webConfig) {
+            (Get-Item $webConfig).LastWriteTime = Get-Date
+            Write-Host "web.config touched - forces app pool recycle"
           }
 
-          # App pool'u baslat
           try {
-            & "$env:SystemRoot\System32\inetsrv\appcmd.exe" start apppool /apppool.name:$siteName 2>&1
-            & "$env:SystemRoot\System32\inetsrv\appcmd.exe" start site /site.name:$siteName 2>&1
-            Write-Host "IIS site started"
+            & iisreset /start
+            Write-Host "IIS started"
           } catch {
-            Write-Host "Could not start IIS (may need manual restart)"
+            Write-Host "iisreset start failed: $_"
           }
         shell: powershell
         continue-on-error: true
